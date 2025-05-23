@@ -1,0 +1,25 @@
+metaheuristics_lib/
+├── metaheuristics_lib/
+│   ├── __init__.py
+│   ├── core/
+│   │   ├── algorithm.py          # BaseAlgorithm, API для всех алгоритмов
+│   │   └── problem.py            # BaseProblem, интерфейс задачи                   #TODO  ------
+│   │   └── runner.py             # Экспериментальный раннер (запуск + логика)
+│   ├── algorithms/
+│   │   ├── woa.py                # Whale Optimization Algorithm +2
+│   │   ├── csa.py                # Crow Search Algorithm +2
+│   │   ├── epo.py                # Emperor Penguin Optimizer +2
+│   │   ├── abc.py                # Artificial Bee Colony +2
+│   │   └── gwo.py                # Grey Wolf Optimizer  +2
+│   ├── problems/                 # Наборы тестовых задач
+│   │   └── continuous.py
+│   ├── utils/                    # Вспомогательные модули
+│   │   ├── algorithm_utils.py
+│   │   ├── mp_utils.py
+│   │   ├── mpi_utils.py
+│   │   ├── logger.py
+│   │   ├── timer.py                                                                #TODO
+│   │   └── metrics.py            # метрики: качества решения, сходимости           #TODO
+│   ├── plot.py                                                                     #TODO
+│   └── examples/
+│       └── test....
