@@ -1,84 +1,126 @@
-from typing import Optional
-
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
-
-def plot_surface_3d(
-        problem,
-        best_pos: Optional[np.ndarray] = None,
-        resolution: int = 200,
-        title: str = None
-):
+def plot_fitness_function(fitness_func, bounds, resolution=100, title='Функция приспособленности', best_pos = None, save_path=None):
     """
-    Построить 3D‑поверхность задачи, если dim=2.
+    Строит 3D-график функции приспособленности для функций с двумя переменными.
 
-    - problem: любой BaseProblem с dim=2 и bounds shape=(2,2)
-    - best_pos: точка (или массив точек) лучших решений, shape=(2,) или (N,2)
-    - resolution: число точек по каждой оси
-    - title: заголовок графика
+    :param: fitness_func (callable): Целевая функция, которую необходимо минимизировать.
+    :param: bounds (list of tuples): Список кортежей (low, high) с границами для каждой размерности.
+    :param: resolution (int): Количество точек по каждой оси.
+    :param: title (str): Заголовок графика.
+    :param: save_path (str, optional): Путь для сохранения графика. Если None, график отображается на экране.
     """
-    if problem.dim != 2:
-        raise ValueError("plot_surface_2d поддерживает только dim=2")
+    bounds = np.array(bounds)
+    x_min, x_max = bounds[0]
 
-    # создаём сетку из (resolution x resolution) точек
-    x = np.linspace(problem.bounds[0, 0], problem.bounds[0, 1], resolution)
-    y = np.linspace(problem.bounds[1, 0], problem.bounds[1, 1], resolution)
+    if bounds.shape[0] > 1:
+        y_min, y_max = bounds[1]
+    else:
+        y_min, y_max = bounds[0]
+
+    x = np.linspace(x_min, x_max, resolution)
+    y = np.linspace(y_min, y_max, resolution)
     X, Y = np.meshgrid(x, y)
+    Z = np.zeros_like(X)
 
-    # готовим массив (resolution², 2) для однократного вызова fitness
-    pts = np.stack([X.ravel(), Y.ravel()], axis=1)
-    Z = problem.fitness(pts).reshape(resolution, resolution)
+    # Вычисляем значения функции на сетке
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            Z[i, j] = fitness_func(np.array([[X[i, j], Y[i, j]]]))
 
-    # рисуем поверхность
-    fig = plt.figure(figsize=(8, 6))
+    # Построение графика
+    fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
-    surf = ax.plot_surface(X, Y, Z, alpha=0.8)
-    ax.set_xlabel('x₁');
-    ax.set_ylabel('x₂');
-    ax.set_zlabel('fitness')
-    if title:
-        ax.set_title(title)
+    surf = ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Fitness Value')
+    ax.set_title(title)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
 
-    # пометить лучшее решение
+    # Проверка и преобразование найденного решения в двумерный массив
     if best_pos is not None:
-        best = np.atleast_2d(best_pos)
-        z_best = problem.fitness(best)
-        ax.scatter(best[:, 0], best[:, 1], z_best, c='r', s=50, marker='x', label='best')
+        best_pos = np.atleast_2d(best_pos)  # Преобразуем в двумерный массив, если он одномерный
+        ax.scatter(best_pos, best_pos, best_pos,
+                   color='r', s=100, label='Best Solution', marker='x')
         ax.legend()
 
-    plt.show()
-
-
-def plot_contour_2d(
-        problem,
-        best_pos: Optional[np.ndarray] = None,
-        resolution: int = 200,
-        levels: int = 50,
-        title: str = None
-):
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+               
+def plot_convergence(history, title='График сходимости', save_path=None):
     """
-    2D‑контурный (лейбл‑) график задачи dim=2.
+    Строит график сходимости на основе истории значений целевой функции.
+
+    :param: history (list or np.ndarray): Список значений целевой функции на каждой итерации.
+    :param: title (str): Заголовок графика.
+    :param: save_path (str, optional): Путь для сохранения графика. Если None, график отображается на экране.
     """
-    if problem.dim != 2:
-        raise ValueError("plot_contour_2d поддерживает только dim=2")
+    plt.figure(figsize=(8, 5))
+    plt.plot(history, label='Лучшее значение')
+    plt.xlabel('Итерация')
+    plt.ylabel('Значение целевой функции')
+    plt.title(title)
+    plt.grid(True)
+    plt.legend()
 
-    x = np.linspace(problem.bounds[0, 0], problem.bounds[0, 1], resolution)
-    y = np.linspace(problem.bounds[1, 0], problem.bounds[1, 1], resolution)
-    X, Y = np.meshgrid(x, y)
-    pts = np.stack([X.ravel(), Y.ravel()], axis=1)
-    Z = problem.fitness(pts).reshape(resolution, resolution)
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 
-    plt.figure(figsize=(6, 5))
-    cp = plt.contourf(X, Y, Z, levels=levels)
-    plt.colorbar(cp)
-    plt.xlabel('x₁');
-    plt.ylabel('x₂')
-    if title: plt.title(title)
+def plot_speedup_different_algo(histories, labels, title='Сравнение скорости сходимости', save_path=None):
+    """
+    Строит графики сходимости для нескольких алгоритмов.
 
-    if best_pos is not None:
-        best = np.atleast_2d(best_pos)
-        plt.scatter(best[:, 0], best[:, 1], c='r', marker='x', s=50, label='best')
-        plt.legend()
+    :param: histories (list of list of float): Списки значений функции приспособленности на каждой итерации для разных алгоритмов.
+    :param: labels (list of str): Названия алгоритмов.
+    :param: title (str): Заголовок графика.
+    :param: save_path (str, optional): Путь для сохранения графика. Если None, график отображается на экране.
+    """
+    plt.figure(figsize=(10, 6))
+    for history, label in zip(histories, labels):
+        plt.plot(history, label=label)
+    plt.title(title)
+    plt.xlabel('Итерация')
+    plt.ylabel('Значение функции')
+    plt.legend()
+    plt.grid(True)
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 
-    plt.show()
+def plot_speedup_different_pools(times, labels=None, title='График ускорения', save_path=None):
+    """
+    Строит график ускорения на основе времени выполнения при различном количестве потоков.
+
+    :param times (list or np.ndarray): Время выполнения для каждого количества потоков.
+    :param labels (list, optional): Метки для оси X (например, количество потоков).
+    :param title (str): Заголовок графика.
+    :param save_path (str, optional): Путь для сохранения графика. Если None, график отображается на экране.
+    """
+    times = np.array(times)
+    baseline = times[0]
+    speedup = baseline / times
+    x = labels if labels else range(1, len(times) + 1)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(x, speedup, marker='o', label='Ускорение')
+    plt.xlabel('Количество потоков')
+    plt.ylabel('Ускорение')
+    plt.title(title)
+    plt.grid(True)
+    plt.legend()
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()

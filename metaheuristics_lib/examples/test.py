@@ -6,6 +6,7 @@ from algorithms.emperor_penguin.epo import EmperorPenguinOptimizer
 from algorithms.grey_wolf.gwo import GreyWolfOptimizer
 from algorithms.whale.woa import WhaleOptimizationAlgorithm
 from core.runner import Runner
+from plot import plot_fitness_function, plot_convergence
 from problems.continuous import sphere
 from utils.metrics import best_so_far, area_under_curve, time_to_target
 
@@ -25,7 +26,7 @@ def csa():
 
 
 def woa():
-    algo = WhaleOptimizationAlgorithm(sphere, 1, [(-10, 10)], 20, 200, 42)
+    algo = WhaleOptimizationAlgorithm(sphere, 2, [(-10, 10)], 20, 200, 42)
     runner = Runner(algo, False)
 
     best, history = runner.run()
@@ -35,6 +36,9 @@ def woa():
     print("Best so far", best_so_far(history))
     print("area_under_curve:", area_under_curve(history))
     print("time_to_target:", time_to_target(history, target = 0.7))
+
+    #plot_fitness_function(sphere, [(-10, 10)], best_pos=best_so_far(history))
+    plot_convergence(history)
 
 
 def gwo():

@@ -14,8 +14,9 @@ def best_so_far(history: Sequence[float]) -> List[float]:
     По последовательности значений функции стоимости (fitness) за итерации
     возвращает траекторию лучшего (минимального) значения на пройденных итерациях.
 
-    history: [f1, f2, f3, ...]
-    returns: [min(f1), min(f1,f2), min(f1,f2,f3), ...]
+    :param history: список fitness значений по итерациям
+
+    :return: [min(f1), min(f1,f2), min(f1,f2,f3), ...]
     """
     best = np.minimum.accumulate(history)
     return best.tolist()
@@ -28,6 +29,7 @@ def area_under_curve(history: Sequence[float], normalize: bool = True) -> float:
 
     :param history: список fitness значений по итерациям
     :param normalize: если True, нормирует AUC на число итераций
+
     :return: AUC или нормированный AUC
     """
     best = np.minimum.accumulate(history)
@@ -44,6 +46,7 @@ def time_to_target(history: Sequence[float], target: float) -> Optional[int]:
 
     :param history: список fitness по итерациям
     :param target: целевое значение fitness
+
     :return: индекс итерации (0-based) или None, если не достигнуто
     """
     for i, v in enumerate(history):
@@ -58,6 +61,7 @@ def mean_best(history_list: Sequence[Sequence[float]]) -> float:
     по нескольким запускам алгоритма.
 
     :param history_list: список списков history для каждого запуска
+
     :return: среднее финальное best
     """
     finals = [min(h) for h in history_list]
@@ -71,6 +75,7 @@ def run_multiple(runner: Callable[..., List[float]], runs: int = 30, *args, **kw
     :param runner: функция/метод, который возвращает history (list of fitness)
     :param runs: число запусков
     :param args, kwargs: передаются в runner
+
     :return: список history для каждого запуска
     """
     results = []
@@ -82,14 +87,15 @@ def run_multiple(runner: Callable[..., List[float]], runs: int = 30, *args, **kw
 
 def summarize_runs(histories: Sequence[Sequence[float]], target: Optional[float] = None) -> dict:
     """
-    Собирает ключевые статистики по множеству запусков:
+    ``Собирает ключевые статистики по множеству запусков:
     - mean_final: среднее финальных best
     - std_final: стандартное отклонение финальных best
     - mean_auc: средний AUC
-    - time_to_target: среднее время до достижения target (если задан)
+    - time_to_target: среднее время до достижения target (если задан)``
 
     :param histories: список history списков
     :param target: целевое fitness для time_to_target
+
     :return: словарь со статистиками
     """
     finals = [min(h) for h in histories]

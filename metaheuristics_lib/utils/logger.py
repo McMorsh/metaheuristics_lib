@@ -22,16 +22,14 @@ def get_logger(
     """
     Создать и настроить логгер с указанным именем и уровнем.
 
-    Параметры:
-        name: имя логгера (обычно __name__ модуля).
-        level: уровень логирования (DEBUG, INFO, WARNING, ERROR, CRITICAL).
-        log_to_file: если True, добавляется файловый обработчик.
-        filename: имя файла для логов. Если None и log_to_file=True, используется '<name>.log'.
-        max_bytes: максимальный размер файла до ротации (только для файлового хэндлера).
-        backup_count: число резервных файлов при ротации.
+    :param name: имя логгера (обычно __name__ модуля).
+    :param level: уровень логирования (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+    :param log_to_file: если True, добавляется файловый обработчик.
+    :param filename: имя файла для логов. Если None и log_to_file=True, используется '<name>.log'.
+    :param max_bytes: максимальный размер файла до ротации (только для файлового хэндлера).
+    :param backup_count: число резервных файлов при ротации.
 
-    Возвращает:
-        настроенный экземпляр logging.Logger
+    :return настроенный экземпляр logging.Logger
 
     Пример использования:
         logger = get_logger(__name__, level=logging.DEBUG, log_to_file=True, filename='app.log')
