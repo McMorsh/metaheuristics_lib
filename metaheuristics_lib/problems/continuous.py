@@ -1,11 +1,20 @@
 import numpy as np
 
 
-def  McCormick(x: np.ndarray) -> float:
-    positions = np.atleast_2d(positions)
-    x = positions[:, 0]
-    y = positions[:, 1]
-    return np.sin(x + y) + (x - y) ** 2 - 1.5 * x + 2.5 * y + 1
+def mccormick(x: np.ndarray) -> float:
+    """
+    Функция McCormick для двумерного вектора x = [x1, x2].
+    """
+    x = np.asarray(x)
+    n = x.size
+
+    if n == 0:
+        raise ValueError("Вектор x не должен быть пустым")
+
+    x1 = x[:n // 2]
+    x2 = x[n // 2:]
+
+    return float(np.sum(np.sin(x1 + x2) + (x1 - x2) ** 2 - 1.5 * x1 + 2.5 * x2 + 1))
 
 
 def griewank(x: np.ndarray) -> float:
@@ -13,19 +22,22 @@ def griewank(x: np.ndarray) -> float:
     Функция Гриуэнка (Griewank) для вектора x.
     """
     x = np.asarray(x)
+    n = x.size
+
+    if n == 0:
+        raise ValueError("Вектор x не должен быть пустым")
+
     sum_term = np.sum(x ** 2) / 4000.0
-    idx = np.arange(1, x.size + 1)
+    idx = np.arange(1, n + 1)
     prod_term = np.prod(np.cos(x / np.sqrt(idx)))
+
     return 1.0 + sum_term - prod_term
 
 
 def ackley(x: np.ndarray) -> float:
     """
     Функция Эйкли (Ackley) для вектора x.
-    Минимизируется при x = 0.
     """
-    for i in range(30000):
-        np.cos(i)
 
     x = np.asarray(x)
     n = x.size
@@ -43,54 +55,69 @@ def ackley(x: np.ndarray) -> float:
 
 def sphere(x: np.ndarray) -> float:
     """
-    Функция Сферы: сумма квадратов координат.
-    Минимизируется при x = 0.
+    Функция Сферы для вектора x.
     """
     x = np.asarray(x)
+
+    if x.size == 0:
+        raise ValueError("Вектор x не должен быть пустым")
+
     return float(np.sum(x ** 2))
 
 
 def rosenbrock(x: np.ndarray) -> float:
     """
-    Функция Розенброка для вектора x размерности >=2.
-    Минимизируется при x = [1,...,1].
+    Функция Розенброка для вектора x.
     """
     x = np.asarray(x)
-    if x.ndim != 1 or x.size < 2:
-        raise ValueError("x должен быть одномерным вектором размером >= 2")
+
+    if x.size < 2:
+        raise ValueError("Вектор x не должен быть меньше 2")
+
     return float(np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2))
 
 
 def rastrigin(x: np.ndarray) -> float:
     """
     Функция Растригина для вектора x.
-    Минимизируется при x = 0.
     """
     x = np.asarray(x)
     n = x.size
     A = 10
+
+    if n == 0:
+        raise ValueError("Вектор x не должен быть пустым")
+
     return float(A * n + np.sum(x ** 2 - A * np.cos(2 * np.pi * x)))
 
 
 def himmelblau(x: np.ndarray) -> float:
     """
-    Функция Химмельблау для двумерного x.
-    Минимизируется при (3,2), (-2.805,3.131), (-3.779,-3.283), (3.584,-1.848).
+    Функция Химмельблау для вектора x.
     """
     x = np.asarray(x)
-    if x.shape != (2,):
-        raise ValueError("x должен быть вектором длины 2")
-    x1, x2 = x
-    return float((x1 ** 2 + x2 - 11) ** 2 + (x1 + x2 ** 2 - 7) ** 2)
+    n = x.size
+
+    if n == 0:
+        raise ValueError("Вектор x не должен быть пустым")
+
+    x1 = x[:n//2]
+    x2 = x[n//2:]
+
+    return float(np.sum((x1 ** 2 + x2 - 11) ** 2 + (x1 + x2 ** 2 - 7) ** 2))
 
 
 def three_hump_camel(x: np.ndarray) -> float:
     """
-    Функция трехгорбого верблюда для двумерного x.
-    Минимизируется при x = (0,0).
+    Функция трехгорбого верблюда для вектора x.
     """
     x = np.asarray(x)
-    if x.shape != (2,):
-        raise ValueError("x должен быть вектором длины 2")
-    x1, x2 = x
-    return float(2 * x1 ** 2 - 1.05 * x1 ** 4 + x1 ** 6 / 6 + x1 * x2 + x2 ** 2)
+    n = x.size
+
+    if n == 0:
+        raise ValueError("Вектор x не должен быть пустым")
+
+    x1 = x[:n // 2]
+    x2 = x[n // 2:]
+
+    return float(np.sum(2 * x1 ** 2 - 1.05 * x1 ** 4 + x1 ** 6 / 6 + x1 * x2 + x2 ** 2))

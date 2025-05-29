@@ -4,9 +4,11 @@ utils/metrics.py
 Модуль для вычисления ключевых метрик качества и поведения метаэвристических алгоритмов.
 Предназначен для анализа сходимости, стабильности и разнообразия решений.
 """
-from typing import List, Sequence, Callable, Optional
+from typing import List, Sequence, Callable, Optional, Any
 
 import numpy as np
+
+from core.runner import Runner
 
 
 def best_so_far(history: Sequence[float]) -> List[float]:
@@ -68,49 +70,64 @@ def mean_best(history_list: Sequence[Sequence[float]]) -> float:
     return float(np.mean(finals))
 
 
-def run_multiple(runner: Callable[..., List[float]], runs: int = 30, *args, **kwargs) -> List[List[float]]:
+def run_multiple(runner, runs: int = 30, seed = None) -> List[List[float]]:
     """
     Провести несколько запусков алгоритма для статистического анализа.
 
-    :param runner: функция/метод, который возвращает history (list of fitness)
+    :param algo: 1
     :param runs: число запусков
-    :param args, kwargs: передаются в runner
 
-    :return: список history для каждого запуска
+    :return: 1
     """
     results = []
-    for i in range(runs):  # фиксируем разные seed внутри runner, если нужно
-        history = runner(*args, **kwargs)
-        results.append(history)
+    list_of_best = []
+    list_of_history = []
+    list_of_time = []
+
+    for i in range(runs):
+        if seed is not None:
+            runner.seed = seed + i
+
+        best, history, elapsed_time = runner.run()
+        list_of_best.append(best["minimum_value"])
+        list_of_history.append(history)
+        list_of_time.append(elapsed_time)
+
+    results.append({
+        "best": list_of_best,
+        "history": list_of_history,
+        "time": list_of_time
+    })
+
     return results
 
 
-def summarize_runs(histories: Sequence[Sequence[float]], target: Optional[float] = None) -> dict:
+def summarize_runs(results: list[dict[str, list[float]]], target: Optional[float] = None) -> dict:
     """
-    ``Собирает ключевые статистики по множеству запусков:
+    Собирает ключевые статистики по множеству запусков:
     - mean_final: среднее финальных best
     - std_final: стандартное отклонение финальных best
     - mean_auc: средний AUC
     - time_to_target: среднее время до достижения target (если задан)``
 
-    :param histories: список history списков
+    :param results
     :param target: целевое fitness для time_to_target
 
     :return: словарь со статистиками
     """
-    finals = [min(h) for h in histories]
-    aucs = [area_under_curve(h, normalize=True) for h in histories]
+    aucs = [area_under_curve(h, normalize=True) for h in results[0]["history"]]
     summary = {
-        'mean_final': float(np.mean(finals)),
-        'std_final': float(np.std(finals)),
+        'mean_final': float(np.mean(results[0]["best"])),
+        'std_final': float(np.std(results[0]["best"])),
         'mean_auc': float(np.mean(aucs)),
         'std_auc': float(np.std(aucs)),
-        'runs': len(histories)
+        'time': float(np.mean(results[0]["time"])),
     }
     if target is not None:
-        tts = [time_to_target(h, target) for h in histories]
+        tts = [time_to_target(h, target) for h in results[0]["history"]]
         # фильтруем None
         tts_valid = [t for t in tts if t is not None]
         summary['mean_time_to_target'] = float(np.mean(tts_valid)) if tts_valid else None
         summary['success_rate'] = len(tts_valid) / len(tts)
+
     return summary

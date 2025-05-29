@@ -143,7 +143,7 @@ class ArtificialBeeColony(BaseAlgorithm):
 
         # Этап наблюдающих пчел (выбор источника по вероятностям)
         # Рассчитываем вероятности на основе fitness
-        probs = (1.0 / (1.0 + self.best_fitness))
+        probs = (1.0 / (1.0 + abs(self.best_fitness)))
         probs = probs / probs.sum()
         for _ in range(self.n_bees):
             __i = np.random.choice(self.n_bees, p=probs)

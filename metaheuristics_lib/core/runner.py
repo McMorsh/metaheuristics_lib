@@ -15,9 +15,10 @@ class Runner:
     поэтому при создании алгоритма задавать все через его конструктор.
     """
 
-    def __init__(self, algorithm: BaseAlgorithm, iteration_info=True):
+    def __init__(self, algorithm: BaseAlgorithm, iteration_info=True, seed = None):
         self.algorithm = algorithm
         self.f = iteration_info
+        self.seed = seed if seed else self.algorithm.params.get('seed')
 
     def run(self) -> (Dict[str, Any], List[float]):
         """
@@ -34,10 +35,9 @@ class Runner:
             raise ValueError('Parameter max_iter must be set in algorithm.params')
 
         # Опционально: устанавливаем seed
-        seed = self.algorithm.params.get('seed')
-        if seed is not None:
+        if self.seed is not None:
             import numpy as np
-            np.random.seed(seed)
+            np.random.seed(self.seed)
 
         # Инициализация алгоритма
         logger.info('Initializing algorithm(%s)...', self.algorithm.__class__.__name__)
@@ -68,6 +68,7 @@ class Runner:
         # Финальный результат
         total_elapsed = time.perf_counter() - total_start
         result = self.algorithm.get_result()
-        logger.info(f"Algorithm end: the best f = {result['minimum_value']:.4e}; "
-                    f"time = {total_elapsed:.4f}c")
-        return result, history
+        if self.f:
+            logger.info(f"Algorithm end: the best f = {result['minimum_value']:.4e}; "
+                                             f"time = {total_elapsed:.4f}c")
+        return result, history, total_elapsed
