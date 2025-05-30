@@ -6,8 +6,9 @@ from algorithms.crow_search.csa import CrowSearchAlgorithm
 from algorithms.emperor_penguin.epo import EmperorPenguinOptimizer
 from algorithms.grey_wolf.gwo import GreyWolfOptimizer
 from algorithms.whale.woa import WhaleOptimizationAlgorithm
+
 from core.runner import Runner
-from plot import plot_fitness_function, plot_convergence
+from plot import *
 from problems.continuous import *
 from utils.metrics import best_so_far, area_under_curve, time_to_target, run_multiple, summarize_runs
 
@@ -105,6 +106,7 @@ def test_all_algorithms():
     max_iterations = 100
     seed = 42
     list_of_results = []
+    list_of_data = []
 
     for func_name, func, bounds, target in functions:
         print("-"*25)
@@ -116,7 +118,7 @@ def test_all_algorithms():
             algo = AlgoClass(func, dim, bounds, agents, max_iterations)
             runner = Runner(algo, False)
 
-            result = run_multiple(runner, seed)
+            result = run_multiple(runner, 2, seed)
 
             list_of_results.append({
                 "Function": func_name,
@@ -124,12 +126,24 @@ def test_all_algorithms():
                 **summarize_runs(result, target)
             })
 
-    save_path = fr"G:\Code\metaheuristics_lib\results\experiment_results.csv"
-    df = pd.DataFrame(list_of_results)
-    df.to_csv(save_path, index=False, sep=',', encoding='utf-8')
-    print(f"\n✅ Results saved to: {save_path}\n")
+            list_of_data.append({
+                "Function": func_name,
+                "Algorithm": algo_name,
+                **result[0],
+            })
+
+    save_path1 = fr"G:\Code\metaheuristics_lib\results\convergence_data.csv"
+    df1 = pd.DataFrame(list_of_data)
+    df1.to_csv(save_path1, index=False, sep=',', encoding='utf-8')
+    print(f"\n✅ Results saved to: {save_path1}\n")
+
+    save_path2 = fr"G:\Code\metaheuristics_lib\results\experiment_results.csv"
+    df2 = pd.DataFrame(list_of_results)
+    df2.to_csv(save_path2, index=False, sep=',', encoding='utf-8')
+    print(f"\n✅ Results saved to: {save_path2}\n")
 
     df_loaded = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\experiment_results.csv", sep=',')
+    df_loaded2 = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\convergence_data.csv", sep=',')
 
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
@@ -137,8 +151,54 @@ def test_all_algorithms():
     pd.set_option('display.max_colwidth', None)
 
     print(df_loaded)
+    print(df_loaded2)
 
 
 if __name__ == '__main__':
-    #woa()
-    test_all_algorithms()
+    # woa()
+
+    #test_all_algorithms()
+
+    df = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\convergence_data.csv", sep=',')
+
+    # Преобразуем строку истории в массив
+    df["history"] = df["history"].apply(eval)  # безопасно, если файл твой
+    df["time"] = df["time"].apply(eval)
+
+    # Получаем список уникальных функций
+    functions = df["Function"].unique()
+
+    for func in functions:
+        func_df = df[df["Function"] == func]
+
+        histories = []
+        labels = []
+        times = []
+
+        for _, row in func_df.iterrows():
+            label = row["Algorithm"]
+            all_runs = np.array(row["history"])  # shape = (30, итерации)
+            all_times = np.array(row["time"])  # shape = (30,)
+
+            mean_history = np.mean(all_runs, axis=0)
+            histories.append(mean_history)
+            labels.append(label)
+
+            # усредняем время выполнения
+            mean_time = np.mean(all_times)  # или np.median(all_times)
+            times.append(mean_time)
+
+        # Строим график
+        plot_convergence(
+            histories,
+            labels,
+            title=f"Сходимость на функции: {func}"
+        )
+
+        plot_execution_time_comparison(
+            times,
+            labels,
+            title=f"Сравнение времени выполнения алгоритмов на функции: {func}"
+        )
+
+    #plot_speedup_different_pools(times, labels, title = f"График ускорения для функции {fitness_func.__name__} алгоритм: {alg.__name__} ")

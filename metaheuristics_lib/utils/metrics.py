@@ -70,7 +70,7 @@ def mean_best(history_list: Sequence[Sequence[float]]) -> float:
     return float(np.mean(finals))
 
 
-def run_multiple(runner, runs: int = 30, seed = None) -> List[List[float]]:
+def run_multiple(runner, runs: int = 30, seed = None):
     """
     Провести несколько запусков алгоритма для статистического анализа.
 
@@ -115,7 +115,9 @@ def summarize_runs(results: list[dict[str, list[float]]], target: Optional[float
 
     :return: словарь со статистиками
     """
+
     aucs = [area_under_curve(h, normalize=True) for h in results[0]["history"]]
+
     summary = {
         'mean_final': float(np.mean(results[0]["best"])),
         'std_final': float(np.std(results[0]["best"])),
@@ -123,6 +125,7 @@ def summarize_runs(results: list[dict[str, list[float]]], target: Optional[float
         'std_auc': float(np.std(aucs)),
         'time': float(np.mean(results[0]["time"])),
     }
+
     if target is not None:
         tts = [time_to_target(h, target) for h in results[0]["history"]]
         # фильтруем None
