@@ -1,9 +1,14 @@
 import numpy as np
 
+# Func_torsion - omegas, nu, l0, m0, n0
+def test_fun(x: np.ndarray) -> float:
+
+    return
+
 
 def mccormick(x: np.ndarray) -> float:
     """
-    Функция McCormick для двумерного вектора x = [x1, x2].
+    Функция McCormick для вектора x.
     """
     x = np.asarray(x)
     n = x.size
@@ -74,7 +79,7 @@ def rosenbrock(x: np.ndarray) -> float:
     if x.size < 2:
         raise ValueError("Вектор x не должен быть меньше 2")
 
-    return float(np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2))
+    return float(np.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2))
 
 
 def rastrigin(x: np.ndarray) -> float:
@@ -101,8 +106,8 @@ def himmelblau(x: np.ndarray) -> float:
     if n == 0:
         raise ValueError("Вектор x не должен быть пустым")
 
-    x1 = x[:n//2]
-    x2 = x[n//2:]
+    x1 = x[:n // 2]
+    x2 = x[n // 2:]
 
     return float(np.sum((x1 ** 2 + x2 - 11) ** 2 + (x1 + x2 ** 2 - 7) ** 2))
 

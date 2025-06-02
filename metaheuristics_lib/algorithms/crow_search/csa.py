@@ -74,7 +74,7 @@ class CrowSearchAlgorithm(BaseAlgorithm):
             np.random.seed(self.seed)
 
         # Параметры CSA
-        self.fly_len = float(self.params.get("flight_length", 2.0))
+        self.fly_len = float(self.params.get("flight_length", 1.0))
         self.awar_prob = float(self.params.get("awareness_prob", 0.1))
         self.expand_rate = float(self.params.get('expand_rate', 1.2))
 

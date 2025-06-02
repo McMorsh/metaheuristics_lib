@@ -4,11 +4,9 @@ utils/metrics.py
 Модуль для вычисления ключевых метрик качества и поведения метаэвристических алгоритмов.
 Предназначен для анализа сходимости, стабильности и разнообразия решений.
 """
-from typing import List, Sequence, Callable, Optional, Any
+from typing import List, Sequence, Optional
 
 import numpy as np
-
-from core.runner import Runner
 
 
 def best_so_far(history: Sequence[float]) -> List[float]:
@@ -16,7 +14,7 @@ def best_so_far(history: Sequence[float]) -> List[float]:
     По последовательности значений функции стоимости (fitness) за итерации
     возвращает траекторию лучшего (минимального) значения на пройденных итерациях.
 
-    :param history: список fitness значений по итерациям
+    :param history: Список fitness значений по итерациям
 
     :return: [min(f1), min(f1,f2), min(f1,f2,f3), ...]
     """
@@ -29,7 +27,7 @@ def area_under_curve(history: Sequence[float], normalize: bool = True) -> float:
     Вычисляет площадь под кривой best-so-far по итерациям.
     Чем меньше AUC, тем быстрее алгоритм достиг хорошего решения.
 
-    :param history: список fitness значений по итерациям
+    :param history: Список fitness значений по итерациям
     :param normalize: если True, нормирует AUC на число итераций
 
     :return: AUC или нормированный AUC
@@ -46,7 +44,7 @@ def time_to_target(history: Sequence[float], target: float) -> Optional[int]:
     Определяет номер итерации, на которой впервые было достигнуто
     значение fitness <= target.
 
-    :param history: список fitness по итерациям
+    :param history: Список fitness по итерациям
     :param target: целевое значение fitness
 
     :return: индекс итерации (0-based) или None, если не достигнуто
@@ -62,7 +60,7 @@ def mean_best(history_list: Sequence[Sequence[float]]) -> float:
     Среднее из лучших значений (последний элемент best-so-far)
     по нескольким запускам алгоритма.
 
-    :param history_list: список списков history для каждого запуска
+    :param history_list: Список списков history для каждого запуска
 
     :return: среднее финальное best
     """
@@ -70,12 +68,13 @@ def mean_best(history_list: Sequence[Sequence[float]]) -> float:
     return float(np.mean(finals))
 
 
-def run_multiple(runner, runs: int = 30, seed = None):
+def run_multiple(runner, runs: int = 30, seed=None):
     """
     Провести несколько запусков алгоритма для статистического анализа.
 
-    :param algo: 1
+    :param runner: Данные для запуска алгоритма
     :param runs: число запусков
+    :param seed: seed для инициализации генератора случайных чисел.
 
     :return: 1
     """
@@ -108,9 +107,11 @@ def summarize_runs(results: list[dict[str, list[float]]], target: Optional[float
     - mean_final: среднее финальных best
     - std_final: стандартное отклонение финальных best
     - mean_auc: средний AUC
-    - time_to_target: среднее время до достижения target (если задан)``
+    - std_auc: стандартное отклонение AUC
+    - time_to_target: среднее время до достижения target (если задан)
+    - time: среднее время работы алгоритма
 
-    :param results
+    :param results: результаты запусков алгоритмов (histories, bests,times)
     :param target: целевое fitness для time_to_target
 
     :return: словарь со статистиками

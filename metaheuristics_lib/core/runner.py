@@ -15,7 +15,7 @@ class Runner:
     поэтому при создании алгоритма задавать все через его конструктор.
     """
 
-    def __init__(self, algorithm: BaseAlgorithm, iteration_info=True, seed = None):
+    def __init__(self, algorithm: BaseAlgorithm, iteration_info=True, seed=None):
         self.algorithm = algorithm
         self.f = iteration_info
         self.seed = seed if seed else self.algorithm.params.get('seed')
@@ -70,5 +70,5 @@ class Runner:
         result = self.algorithm.get_result()
         if self.f:
             logger.info(f"Algorithm end: the best f = {result['minimum_value']:.4e}; "
-                                             f"time = {total_elapsed:.4f}c")
+                        f"time = {total_elapsed:.4f}c")
         return result, history, total_elapsed
