@@ -1,5 +1,6 @@
 from time import sleep
 
+import numpy as np
 import pandas as pd
 
 from algorithms.bee_colony.abc import ArtificialBeeColony
@@ -83,14 +84,14 @@ def abc():
 
 def test_all_algorithms():
     functions = [
-        ("Rastrigin", rastrigin, [(-5.12, 5.12)], 0),
-        ("Three Hump Camel", three_hump_camel, [(-5, 5), (-5, 5)], 0),
-        ("Sphere", sphere, [(-100, 100)], 0),
-        ("Rosenbrock", rosenbrock, [(-100, 100)], 0),
-        ("Himmelblau", himmelblau, [(-5, 5), (-5, 5)], 0),
-        ("Griewank", griewank, [(-100, 100)], 0),
-        ("McCormick", mccormick, [(-1.5, 4), (-3, 4)], 1.9133),
-        ("Ackley", ackley, [(-5.12, 5.12)], 0),
+        ("Rastrigin", rastrigin, (-5.12, 5.12), 0, 1),
+        ("Three Hump Camel", three_hump_camel, [(-5, 5), (-5, 5)], 0, 2),
+        ("Sphere", sphere, (-100, 100), 0, 10),
+        ("Rosenbrock", rosenbrock, (-100, 100), 0, 10),
+        ("Himmelblau", himmelblau, [(-5, 5), (-5, 5)], 0, 2),
+        ("Griewank", griewank, (-100, 100), 0, 1),
+        ("McCormick", mccormick, [(-1.5, 4), (-3, 4)], -1.9133, 2),
+        ("Ackley", ackley, (-5, 5), 0, 30),
     ]
 
     algorithms = [
@@ -101,14 +102,14 @@ def test_all_algorithms():
         ("Artificial Bee Colony", ArtificialBeeColony)
     ]
 
-    dim = 10
     agents = 20
     max_iterations = 100
-    seed = 123
+    seed = 1
+
     list_of_results = []
     list_of_data = []
 
-    for func_name, func, bounds, target in functions:
+    for func_name, func, bounds, target, dim in functions:
         print("-" * 25)
         print(f"Testing on function: {func_name}\n")
         for algo_name, AlgoClass in algorithms:
@@ -129,7 +130,7 @@ def test_all_algorithms():
             list_of_results.append({
                 "Function": func_name,
                 "Algorithm": algo_name,
-                **summarize_runs(result, target)
+                **summarize_runs(result, target = 0)
             })
 
             list_of_data.append({
@@ -150,7 +151,7 @@ def test_all_algorithms():
 
 
 def plot_all():
-    df = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\convergence_data.csv", sep=',')
+    df = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\convergence_data_new.csv", sep=',')
 
     # Преобразуем строку истории в массив
     df["history"] = df["history"].apply(eval)  # безопасно, если файл твой
@@ -186,7 +187,6 @@ def plot_all():
             title=f"Сходимость на функции: {func}",
             save_path = fr"G:\Code\metaheuristics_lib\results\сходимость\{func}_conv.png"
         )
-
         plot_execution_time_comparison(
             times,
             labels,
@@ -198,11 +198,11 @@ def plot_all():
 if __name__ == '__main__':
     # woa()
 
-    test_all_algorithms()
+    #test_all_algorithms()
+
     plot_all()
 
-    df_loaded = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\experiment_results.csv", sep=',')
-    # df_loaded2 = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\convergence_data.csv", sep=',')
+    df_loaded = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\experiment_results_new.csv", sep=',')
 
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
@@ -210,9 +210,3 @@ if __name__ == '__main__':
     pd.set_option('display.max_colwidth', None)
 
     print(df_loaded)
-    # print(df_loaded2)
-
-    plot_all()
-
-    # plot_speedup_different_pools(times, labels,
-    # title = f"График ускорения для функции {fitness_func.__name__} алгоритм: {alg.__name__} ")

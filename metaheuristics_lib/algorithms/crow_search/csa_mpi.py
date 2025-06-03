@@ -4,7 +4,7 @@ from typing import Dict, Any
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import initialize_bounds, initialize_positions, enforce_boundaries
+from utils.algorithm_utils import initialize_bounds, initialize_positions, enforce_boundaries_csa
 from utils.mpi_utils import rank, comm, mpi_evaluate_fitness
 
 
@@ -124,9 +124,9 @@ class CrowSearchAlgorithmMPI(BaseAlgorithm):
                     new_crows[i] = [self.low_bounds[d] + (self.high_bounds[d] - self.low_bounds[d]) * random()
                                     for d in range(self.problem_dimen)]
                 # Проверяем и корректируем выход за границы
-                new_crows[i], self.low_bounds, self.high_bounds = enforce_boundaries(new_crows[i],
-                                                                                     self.low_bounds, self.high_bounds,
-                                                                                     self.expand_rate)
+                new_crows[i], self.low_bounds, self.high_bounds = enforce_boundaries_csa(new_crows[i],
+                                                                                         self.low_bounds, self.high_bounds,
+                                                                                         self.expand_rate)
         else:
             new_crows = None
 

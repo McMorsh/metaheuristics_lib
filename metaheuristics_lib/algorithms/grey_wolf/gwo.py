@@ -3,7 +3,7 @@ from typing import Any, Dict
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import initialize_bounds, evaluate_fitness_serial
+from utils.algorithm_utils import initialize_bounds, evaluate_fitness_serial, initialize_positions, enforce_boundaries
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -66,7 +66,7 @@ class GreyWolfOptimizer(BaseAlgorithm):
         # Сохраняем функцию оптимизации и размерность задачи
         self.fitness_function = self.problem
         self.problem_dimen: int = self.dim
-        self._bounds = np.array(self.bounds)
+        self._bounds = self.bounds
         self.n_wolves: int = self.agents
         self._max_iter: int = self.max_iter
 
@@ -75,13 +75,10 @@ class GreyWolfOptimizer(BaseAlgorithm):
             np.random.seed(self.seed)
 
         # Определяем начальные границы поиска
-        self.low_bounds, self.high_bounds = initialize_bounds(self.problem_dimen,
-                                                              self._bounds[0][0], self._bounds[0][1])
+        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
 
         # Инициализация популяции волков
-        self.wolves = np.random.uniform(low=self.low_bounds,
-                                        high=self.high_bounds,
-                                        size=(self.n_wolves, self.problem_dimen))
+        self.wolves = initialize_positions(self.n_wolves, self.problem_dimen, self._bounds, self.seed)
 
         # Оценка фитнесса для каждого волка
         fitness = evaluate_fitness_serial(self.wolves, self.fitness_function)
@@ -151,7 +148,7 @@ class GreyWolfOptimizer(BaseAlgorithm):
                 self.wolves[i, j] = (X1 + X2 + X3) / 3
 
             # Проверка границ диапазона поиска
-            self.wolves[i] = np.clip(self.wolves[i], self.low_bounds, self.high_bounds)
+            self.wolves[i] = enforce_boundaries(self.wolves[i], self._bounds)
 
             self.iteration += 1
 

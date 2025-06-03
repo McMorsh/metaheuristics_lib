@@ -3,7 +3,7 @@ from typing import Dict, Any
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import evaluate_fitness_serial, initialize_bounds
+from utils.algorithm_utils import evaluate_fitness_serial, initialize_bounds, initialize_positions, enforce_boundaries
 
 
 class ArtificialBeeColony(BaseAlgorithm):
@@ -71,7 +71,7 @@ class ArtificialBeeColony(BaseAlgorithm):
         # Сохраняем функцию оптимизации и размерность задачи
         self.fitness_function = self.problem
         self.problem_dimen = self.dim
-        self._bounds = np.array(self.bounds)
+        self._bounds = self.bounds
         self.n_bees = self.agents
         self._max_iter = self.max_iter
 
@@ -83,14 +83,10 @@ class ArtificialBeeColony(BaseAlgorithm):
         self._limit = int(self.params.get("limit", 25))
 
         # Определяем начальные границы поиска
-        self.low_bounds, self.high_bounds = initialize_bounds(self.problem_dimen,
-                                                              self._bounds[0][0],
-                                                              self._bounds[0][1])
+        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
 
         # Инициализируем случайные позиции пчёл
-        self.bees = np.random.uniform(low=self.low_bounds,
-                                      high=self.high_bounds,
-                                      size=(self.n_bees, self.problem_dimen))
+        self.bees = initialize_positions(self.n_bees, self.problem_dimen, self._bounds, self.seed)
 
         # Вычисление значений fitness для всех пчел
         self.fitness = evaluate_fitness_serial(self.bees, self.fitness_function)
@@ -118,7 +114,7 @@ class ArtificialBeeColony(BaseAlgorithm):
 
         # Генерируем новое решение
         new_solution = self.bees[i] + phi * (self.bees[i] - self.bees[k])
-        new_solution = np.clip(new_solution, self.low_bounds, self.high_bounds)
+        new_solution = enforce_boundaries(new_solution, self._bounds)
 
         fit = self.fitness_function(new_solution)
 
@@ -153,9 +149,7 @@ class ArtificialBeeColony(BaseAlgorithm):
         for i in range(self.n_bees):
             if self.trial[i] > self._limit:
                 # создаём случайный источник
-                new_bees = np.random.uniform(low=self.low_bounds,
-                                             high=self.high_bounds,
-                                             size=self.problem_dimen)
+                new_bees = initialize_positions(self.problem_dimen, self.problem_dimen, self._bounds, self.seed)[0]
                 new_fitness = self.fitness_function(new_bees)
                 self.bees[i] = new_bees
                 self.fitness[i] = new_fitness

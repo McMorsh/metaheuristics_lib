@@ -4,7 +4,7 @@ from typing import Dict, Any
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import initialize_bounds, initialize_positions, enforce_boundaries
+from utils.algorithm_utils import initialize_bounds, initialize_positions, enforce_boundaries_csa
 from utils.mp_utils import mp_evaluate_fitness
 
 
@@ -73,7 +73,7 @@ class CrowSearchAlgorithmMP(BaseAlgorithm):
         # Сохраняем функцию оптимизации и размерность задачи
         self.fitness_function = self.problem
         self.problem_dimen = self.dim
-        self._bounds = np.array(self.bounds)
+        self._bounds = self.bounds
         self.n_crows = self.agents
 
         # Инициализируем генератор случайных чисел при наличии seed
@@ -87,12 +87,11 @@ class CrowSearchAlgorithmMP(BaseAlgorithm):
         self._processes = self.params.get('processes', None)
 
         # Определяем начальные границы поиска
-        self.low_bounds, self.high_bounds = initialize_bounds(self.problem_dimen,
-                                                              self._bounds[0][0], self._bounds[0][1])
+        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
 
         # Инициализируем позиции воронов и запоминаем их
-        self.crows = initialize_positions(self.n_crows, self.problem_dimen,
-                                          self.low_bounds, self.high_bounds, self.seed)
+        self.crows = initialize_positions(self.n_crows, self.problem_dimen, self._bounds, self.seed)
+
         self.best_crows = self.crows.copy()
 
         # Всем процессам — вычислить фитнес текущих позиций
@@ -115,24 +114,13 @@ class CrowSearchAlgorithmMP(BaseAlgorithm):
                 new_crows[i] = self.crows[i] + self.fly_len * (random() * (self.best_crows[num[i]] - self.crows[i]))
             else:
                 # Ворон «испугался» и улетел в случайную точку
-                new_crows[i] = [self.low_bounds[d] + (self.high_bounds[d] - self.low_bounds[d]) * random()
-                                for d in range(self.problem_dimen)]
-
+                new_crows[i] = [self._bounds[d][0] + (self._bounds[d][1] - self._bounds[d][0]) * random() for d in
+                                range(self.problem_dimen)]
             # Проверяем и корректируем выход за границы
-            new_crows[i], self.low_bounds, self.high_bounds = enforce_boundaries(new_crows[i],
-                                                                                 self.low_bounds, self.high_bounds,
-                                                                                 self.expand_rate)
+            new_crows[i], self._bounds = enforce_boundaries_csa(new_crows[i], self._bounds, self.expand_rate)
 
         # Параллельно вычисляем фитнес новых позиций
         new_fit = mp_evaluate_fitness(new_crows, self.fitness_function, processes=self._processes)
-
-        # Если заданы дополнительные границы на значение фитнеса — применяем
-        if self._bounds.shape[0] > 1:
-            y_min, y_max = self._bounds[1]
-            for i in range(self.n_crows):
-                if ((y_min is not None and new_fit[i] < y_min) or
-                        (y_max is not None and new_fit[i] > y_max)):
-                    new_fit[i] = np.inf
 
         # Обновляем память для каждого ворона
         for i in range(self.n_crows):

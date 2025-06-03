@@ -50,7 +50,7 @@ def time_to_target(history: Sequence[float], target: float) -> Optional[int]:
     :return: индекс итерации (0-based) или None, если не достигнуто
     """
     for i, v in enumerate(history):
-        if v <= target:
+        if v <= target + 10e-5:
             return i
     return None
 

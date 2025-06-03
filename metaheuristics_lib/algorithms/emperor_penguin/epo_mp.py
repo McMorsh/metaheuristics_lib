@@ -3,7 +3,7 @@ from typing import Dict, Any
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import initialize_bounds
+from utils.algorithm_utils import initialize_bounds, initialize_positions, enforce_boundaries
 from utils.mp_utils import mp_evaluate_fitness
 
 
@@ -68,7 +68,7 @@ class EmperorPenguinOptimizerMP(BaseAlgorithm):
         # Сохраняем функцию оптимизации и размерность задачи
         self.fitness_function = self.problem
         self.problem_dimen = self.dim
-        self._bounds = np.array(self.bounds)
+        self._bounds = self.bounds
         self.n_penguins = self.agents
         self._max_iter = self.max_iter
 
@@ -79,13 +79,10 @@ class EmperorPenguinOptimizerMP(BaseAlgorithm):
         self._processes = self.params.get('processes', None)
 
         # Определяем начальные границы поиска
-        self.low_bounds, self.high_bounds = initialize_bounds(self.problem_dimen, self._bounds[0][0],
-                                                              self._bounds[0][1])
+        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
 
         # Генерируем начальные позиции пингвинов равномерно в пределах границ
-        self.penguins = np.random.uniform(low=self.low_bounds,
-                                          high=self.high_bounds,
-                                          size=(self.n_penguins, self.problem_dimen))
+        self.penguins = initialize_positions(self.n_penguins, self.problem_dimen, self._bounds, self.seed)
 
         # Оцениваем начальный фитнес всех пингвинов параллельно
         self.fitness = mp_evaluate_fitness(self.penguins, self.fitness_function, self._processes)
@@ -122,7 +119,7 @@ class EmperorPenguinOptimizerMP(BaseAlgorithm):
             new_pos = self.penguins[i] + A_vec * D_vec
 
             # Проверяем границы поиска
-            new_pos = np.clip(new_pos, self.low_bounds, self.high_bounds)
+            new_pos = enforce_boundaries(new_pos, self._bounds)
 
             # Распределённая оценка фитнеса после обновления
             new_fitness = self.fitness_function(new_pos)

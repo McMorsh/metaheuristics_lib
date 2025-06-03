@@ -3,7 +3,7 @@ from typing import Any, Dict
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import initialize_bounds
+from utils.algorithm_utils import initialize_bounds, initialize_positions, enforce_boundaries
 from utils.logger import get_logger
 from utils.mp_utils import mp_evaluate_fitness
 
@@ -62,7 +62,7 @@ class WhaleOptimizationAlgorithmMP(BaseAlgorithm):
         # Сохраняем функцию оптимизации и размерность задачи
         self.fitness_function = self.problem
         self.problem_dimen = self.dim
-        self._bounds = np.array(self.bounds)
+        self._bounds = self.bounds
         self.n_whales = self.agents
         self._max_iter = self.max_iter
 
@@ -73,13 +73,10 @@ class WhaleOptimizationAlgorithmMP(BaseAlgorithm):
         self._processes = self.params.get('processes', None)
 
         # Определяем начальные границы поиска
-        self.low_bounds, self.high_bounds = initialize_bounds(self.problem_dimen,
-                                                              self._bounds[0][0], self._bounds[0][1])
+        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
 
         # Инициализация популяции китов
-        self.whales = np.random.uniform(low=self.low_bounds,
-                                        high=self.high_bounds,
-                                        size=(self.n_whales, self.problem_dimen))
+        self.whales = initialize_positions(self.n_whales, self.problem_dimen, self._bounds, self.seed)
 
         # Вычисление значений fitness для всех китов параллельно
         fitness = mp_evaluate_fitness(self.whales, self.fitness_function, self._processes)
@@ -111,9 +108,7 @@ class WhaleOptimizationAlgorithmMP(BaseAlgorithm):
                 new_pos = D * np.exp(l) * np.cos(2 * np.pi * l) + self.best_whale
 
             # Ограничение позиций китов в пределах bounds
-            self.low_bounds, self.high_bounds = initialize_bounds(self.problem_dimen,
-                                                                  self._bounds[0][0], self._bounds[0][1])
-            self.whales[i] = np.clip(new_pos, self.low_bounds, self.high_bounds)
+            self.whales[i] = enforce_boundaries(new_pos, self._bounds)
 
         # Обновление fitness
         fitness = mp_evaluate_fitness(self.whales, self.fitness_function, self._processes)

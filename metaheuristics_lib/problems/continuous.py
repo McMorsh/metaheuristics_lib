@@ -1,25 +1,17 @@
 import numpy as np
 
-# Func_torsion - omegas, nu, l0, m0, n0
-def test_fun(x: np.ndarray) -> float:
-
-    return
-
-
-def mccormick(x: np.ndarray) -> float:
+def mccormick(arr: np.ndarray) -> float:
     """
     Функция McCormick для вектора x.
     """
-    x = np.asarray(x)
-    n = x.size
+    arr = np.asarray(arr)
 
-    if n == 0:
-        raise ValueError("Вектор x не должен быть пустым")
+    if arr.size != 2:
+        raise ValueError("Вектор x должен быть размерностью 2")
 
-    x1 = x[:n // 2]
-    x2 = x[n // 2:]
+    x, y = np.split(arr, 2)
 
-    return float(np.sum(np.sin(x1 + x2) + (x1 - x2) ** 2 - 1.5 * x1 + 2.5 * x2 + 1))
+    return float(np.sum(np.sin(x + y) + (x - y) ** 2 - 1.5 * x + 2.5 * y + 1))
 
 
 def griewank(x: np.ndarray) -> float:
@@ -43,6 +35,8 @@ def ackley(x: np.ndarray) -> float:
     """
     Функция Эйкли (Ackley) для вектора x.
     """
+    # for i in range(100000):
+    #      np.cos(i)
 
     x = np.asarray(x)
     n = x.size
@@ -96,33 +90,29 @@ def rastrigin(x: np.ndarray) -> float:
     return float(A * n + np.sum(x ** 2 - A * np.cos(2 * np.pi * x)))
 
 
-def himmelblau(x: np.ndarray) -> float:
+def himmelblau(arr: np.ndarray) -> float:
     """
     Функция Химмельблау для вектора x.
     """
-    x = np.asarray(x)
-    n = x.size
+    arr = np.asarray(arr)
 
-    if n == 0:
-        raise ValueError("Вектор x не должен быть пустым")
+    if arr.size != 2:
+        raise ValueError("Вектор x должен быть размерностью 2")
 
-    x1 = x[:n // 2]
-    x2 = x[n // 2:]
+    x, y = np.split(arr, 2)
 
-    return float(np.sum((x1 ** 2 + x2 - 11) ** 2 + (x1 + x2 ** 2 - 7) ** 2))
+    return float(np.sum((x ** 2 + y - 11) ** 2 + (x + y ** 2 - 7) ** 2))
 
 
-def three_hump_camel(x: np.ndarray) -> float:
+def three_hump_camel(arr: np.ndarray) -> float:
     """
     Функция трехгорбого верблюда для вектора x.
     """
-    x = np.asarray(x)
-    n = x.size
+    arr = np.asarray(arr)
 
-    if n == 0:
-        raise ValueError("Вектор x не должен быть пустым")
+    if arr.size != 2:
+        raise ValueError("Вектор x должен быть размерностью 2")
 
-    x1 = x[:n // 2]
-    x2 = x[n // 2:]
+    x, y = np.split(arr, 2)
 
-    return float(np.sum(2 * x1 ** 2 - 1.05 * x1 ** 4 + x1 ** 6 / 6 + x1 * x2 + x2 ** 2))
+    return float(np.sum(2 * x ** 2 - 1.05 * x ** 4 + x ** 6 / 6 + x * y + y ** 2))
