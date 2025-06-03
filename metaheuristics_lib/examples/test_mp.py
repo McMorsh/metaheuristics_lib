@@ -7,10 +7,8 @@ from algorithms.crow_search.csa_mp import CrowSearchAlgorithmMP
 from algorithms.emperor_penguin.epo_mp import EmperorPenguinOptimizerMP
 from algorithms.grey_wolf.gwo_mp import GreyWolfOptimizerMP
 from algorithms.whale.woa_mp import WhaleOptimizationAlgorithmMP
-
-
 from core.runner import Runner
-from plot import plot_convergence, plot_execution_time_comparison, plot_speedup_different_pools
+from plot import plot_speedup_different_pools
 from problems.continuous import *
 from utils.metrics import *
 
@@ -87,7 +85,6 @@ def test_all_algorithms():
         ("Ackley", ackley, (-5, 5), 0, 30),
     ]
 
-
     algorithms = [
         ("Whale Optimization Algorithm", WhaleOptimizationAlgorithmMP),
         # ("Crow Search Algorithm", CrowSearchAlgorithmMP),
@@ -96,7 +93,7 @@ def test_all_algorithms():
         # ("Artificial Bee Colony", ArtificialBeeColonyMP)
     ]
 
-    pools = [1,2,4,6] # Процессы
+    pools = [1, 2, 4, 6]  # Процессы
 
     agents = 20
     max_iterations = 100
@@ -109,9 +106,8 @@ def test_all_algorithms():
             print("-" * 25)
             print(f"Testing on function: {func_name} with Thread: {p}\n")
             for algo_name, AlgoClass in algorithms:
-
                 sleep(0.5)
-                algo = AlgoClass(func, dim, bounds, agents, max_iterations, processes = p)
+                algo = AlgoClass(func, dim, bounds, agents, max_iterations, processes=p)
 
                 runner = Runner(algo, True)
 

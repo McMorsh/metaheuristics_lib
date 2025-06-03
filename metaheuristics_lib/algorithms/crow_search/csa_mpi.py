@@ -125,7 +125,8 @@ class CrowSearchAlgorithmMPI(BaseAlgorithm):
                                     for d in range(self.problem_dimen)]
                 # Проверяем и корректируем выход за границы
                 new_crows[i], self.low_bounds, self.high_bounds = enforce_boundaries_csa(new_crows[i],
-                                                                                         self.low_bounds, self.high_bounds,
+                                                                                         self.low_bounds,
+                                                                                         self.high_bounds,
                                                                                          self.expand_rate)
         else:
             new_crows = None

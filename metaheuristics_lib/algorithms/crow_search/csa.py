@@ -1,10 +1,11 @@
-from random import randint, random
+from random import random
 from typing import Dict, Any
 
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import evaluate_fitness_serial, initialize_bounds, enforce_boundaries_csa, initialize_positions
+from utils.algorithm_utils import evaluate_fitness_serial, initialize_bounds, enforce_boundaries_csa, \
+    initialize_positions
 
 
 class CrowSearchAlgorithm(BaseAlgorithm):
@@ -108,7 +109,7 @@ class CrowSearchAlgorithm(BaseAlgorithm):
                 new_crows[i] = [self._bounds[d][0] + (self._bounds[d][1] - self._bounds[d][0]) * random() for d in
                                 range(self.problem_dimen)]
             # Проверяем и корректируем выход за границы
-            new_crows[i], self._bounds = enforce_boundaries_csa(new_crows[i],self._bounds, self.expand_rate)
+            new_crows[i], self._bounds = enforce_boundaries_csa(new_crows[i], self._bounds, self.expand_rate)
 
         # Вычисляем фитнес новых позиций
         new_fit = evaluate_fitness_serial(new_crows, self.fitness_function)

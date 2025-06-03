@@ -71,7 +71,7 @@ class EmperorPenguinOptimizer(BaseAlgorithm):
         self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
 
         # Генерируем начальные позиции пингвинов равномерно в пределах границ
-        self.penguins = initialize_positions(self.n_penguins, self.problem_dimen ,self._bounds, self.seed)
+        self.penguins = initialize_positions(self.n_penguins, self.problem_dimen, self._bounds, self.seed)
 
         # Оцениваем начальный фитнес всех пингвинов
         self.fitness = evaluate_fitness_serial(self.penguins, self.fitness_function)

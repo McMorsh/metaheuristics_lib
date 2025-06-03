@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def mccormick(arr: np.ndarray) -> float:
     """
     Функция McCormick для вектора x.

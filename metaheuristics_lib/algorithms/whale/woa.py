@@ -68,16 +68,16 @@ class WhaleOptimizationAlgorithm(BaseAlgorithm):
             np.random.seed(self.seed)
 
         # Определяем начальные границы поиска
-        self._bounds  = initialize_bounds(self.problem_dimen, self._bounds)
+        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
 
         # Инициализация популяции китов
         self.whales = initialize_positions(self.n_whales, self.problem_dimen, self._bounds, self.seed)
-        #print(self.whales)
+        # print(self.whales)
 
         # Вычисление значений fitness для всех китов
         fitness = evaluate_fitness_serial(self.whales, self.fitness_function)
 
-        #print(fitness)
+        # print(fitness)
         self.best_whale = self.whales[np.argmin(fitness)]  # Лучший кит
         self.best_fitness = float(np.min(fitness))  # Минимум функции
 

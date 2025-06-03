@@ -64,7 +64,7 @@ def initialize_bounds(dim, bounds):
 
     :return: список кортежей [(low, high), ...] длиной dim.
     """
-    if isinstance(bounds, tuple) :  # один интервал
+    if isinstance(bounds, tuple):  # один интервал
         return [bounds] * dim
     elif isinstance(bounds, list):
         if len(bounds) != dim:
@@ -72,7 +72,6 @@ def initialize_bounds(dim, bounds):
         return bounds
     else:
         raise TypeError("bounds должен быть кортежем или списком кортежей")
-
 
 
 def initialize_positions(agents: int, dim: int, bounds, seed=None):

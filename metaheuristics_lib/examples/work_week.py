@@ -1,18 +1,19 @@
+import math
+import time
+
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_bvp, simpson
 from scipy.optimize import *
-import random, math, time, warnings
 
 from algorithms.bee_colony.abc_mp import ArtificialBeeColonyMP
 from algorithms.crow_search.csa_mp import CrowSearchAlgorithmMP
 from algorithms.emperor_penguin.epo_mp import EmperorPenguinOptimizerMP
-from algorithms.grey_wolf.gwo_mp import GreyWolfOptimizerMP
 from algorithms.whale.woa_mp import WhaleOptimizationAlgorithmMP
-
 from core.runner import Runner
 from plot import plot_execution_time_comparison, plot_convergence, plot_speedup_different_pools
 from utils.metrics import summarize_runs, run_multiple
+
 
 def func(rho, y):
     '''
@@ -21,7 +22,7 @@ def func(rho, y):
     '''
     y1 = y[0]
     y2 = y[1]
-    lmbd = 2*nu/(1-2*nu)
+    lmbd = 2 * nu / (1 - 2 * nu)
     t1 = rho ** 2
     t2 = t1 ** 2
     t4 = 2 * m
@@ -53,9 +54,20 @@ def func(rho, y):
     t70 = 6 * lmbd
     t72 = (t66 + t69 + n - t70 - 4) * t2
     t89 = t24 ** 2
-    return np.vstack([y2,0.1e1 / (5 * t8 * t5 * t2 + 6 * t7 * (t22 * t52 + t28) * t1 + t54 * t35 + t22 * t1 * (2 * t42 + 2 * t38 + 2 * t44 + t4 - n + t67) + t72) / t1 * (-t8 * y2 * t5 * t2 * rho - 3 * t8 * t14 * t2 * y1 * l - 2 * t7 * y2 * (t22 * (t13 - 1) * l + t28) * t1 * rho - 2 * t7 * y1 * (t22 * t35 + t1 * (t42 + t38 + t44 + m - t39 + lmbd)) * t1 - y2 * (t54 * (t13 - 3) * t52 + 2 * t22 * (-l * t37 - t24 * t43 - lmbd - m + t39 + t42) * t1 + t72) * rho + y1 * (t54 * t5 * t34 * t14 + 2 * t22 * t1 * (t1 * (2 * m * t24 + lmbd + t38 - t4 + 2) * t12 + t25 - t26 - t4 + lmbd + 2) * t14 + (-4 + t1 * (-4 + t66 + 2 * m * t89 + t24 * (-4 * m + t67 + 4) + n - t70) * t12 + t66 + t69 + n - t70) * t2))])
+    return np.vstack([y2, 0.1e1 / (5 * t8 * t5 * t2 + 6 * t7 * (t22 * t52 + t28) * t1 + t54 * t35 + t22 * t1 * (
+                2 * t42 + 2 * t38 + 2 * t44 + t4 - n + t67) + t72) / t1 * (
+                                  -t8 * y2 * t5 * t2 * rho - 3 * t8 * t14 * t2 * y1 * l - 2 * t7 * y2 * (
+                                      t22 * (t13 - 1) * l + t28) * t1 * rho - 2 * t7 * y1 * (
+                                              t22 * t35 + t1 * (t42 + t38 + t44 + m - t39 + lmbd)) * t1 - y2 * (
+                                              t54 * (t13 - 3) * t52 + 2 * t22 * (
+                                                  -l * t37 - t24 * t43 - lmbd - m + t39 + t42) * t1 + t72) * rho + y1 * (
+                                              t54 * t5 * t34 * t14 + 2 * t22 * t1 * (t1 * (
+                                                  2 * m * t24 + lmbd + t38 - t4 + 2) * t12 + t25 - t26 - t4 + lmbd + 2) * t14 + (
+                                                          -4 + t1 * (-4 + t66 + 2 * m * t89 + t24 * (
+                                                              -4 * m + t67 + 4) + n - t70) * t12 + t66 + t69 + n - t70) * t2))])
 
-def bc(ya,yb):
+
+def bc(ya, yb):
     '''
     ya[0]=R(rho_0), ya[1]=R'(rho_0)
     yb[0]=R(1),     yb[1]=R'(1)
@@ -64,7 +76,7 @@ def bc(ya,yb):
     ya2 = ya[1]
     yb1 = yb[0]
     yb2 = yb[1]
-    lmbd = 2*nu/(1-2*nu)
+    lmbd = 2 * nu / (1 - 2 * nu)
     t1 = rho_0 ** 2
     t2 = t1 ** 2
     t3 = 2 * m
@@ -95,12 +107,16 @@ def bc(ya,yb):
     t60 = yb1 ** 2
     t68 = t58 ** 2
     t70 = t60 ** 2
-    bc1 = 1 / t2 * ya2 * (t7 * t4 * t2 + 2 * t6 * (t13 * t11 * l + (t16 - 3 * l + lmbd - t3 + 2) * t1) * t1 + t26 * t24 * l + t13 * t1 * (2 * t1 * t32 - n + t3 + t35 + t38 + t39) + (t44 + t46 + n - t47 - 4) * t2) / 4
-    bc2 = yb2 * (-4 + t56 * t4 + t55 * (2 * l * t58 * t60 - 6 * l - 4 * m + 2 * t16 + t39 + 4) + t70 * t68 * l + t60 * (2 * t32 + t35 + t38 + t3 - n + t39) + t44 + t46 + n - t47) / 4
+    bc1 = 1 / t2 * ya2 * (t7 * t4 * t2 + 2 * t6 * (
+                t13 * t11 * l + (t16 - 3 * l + lmbd - t3 + 2) * t1) * t1 + t26 * t24 * l + t13 * t1 * (
+                                      2 * t1 * t32 - n + t3 + t35 + t38 + t39) + (t44 + t46 + n - t47 - 4) * t2) / 4
+    bc2 = yb2 * (-4 + t56 * t4 + t55 * (2 * l * t58 * t60 - 6 * l - 4 * m + 2 * t16 + t39 + 4) + t70 * t68 * l + t60 * (
+                2 * t32 + t35 + t38 + t3 - n + t39) + t44 + t46 + n - t47) / 4
     return np.array([bc1, bc2]).reshape(-1)
 
+
 def integrand_Q(rho, y1, y2):
-    lmbd = 2*nu/(1-2*nu)
+    lmbd = 2 * nu / (1 - 2 * nu)
     t1 = rho ** 2
     t5 = omega ** 2
     t6 = t5 ** 2
@@ -117,10 +133,14 @@ def integrand_Q(rho, y1, y2):
     t27 = t13 ** 2
     t36 = t1 ** 2
     t41 = n / 2
-    return (t36 * (t11 * (l + t7) * t6 + t10 * t5 * (4 * m * t13 + 2 * t16 + t20 - t21 + 4) + l * t25 + 2 * m * t27 + t13 * (-t21 + t20 + 4) + t14 * (t7 - n + t20) - 6 * lmbd + n - 4) + 2 * t1 * t10 * (t10 * (l + m) * t5 + t16 + t14 * (-m + t41) + lmbd + m - t41) + t11 * l) * k * math.pi / t1 / rho / 2
+    return (t36 * (t11 * (l + t7) * t6 + t10 * t5 * (
+                4 * m * t13 + 2 * t16 + t20 - t21 + 4) + l * t25 + 2 * m * t27 + t13 * (-t21 + t20 + 4) + t14 * (
+                               t7 - n + t20) - 6 * lmbd + n - 4) + 2 * t1 * t10 * (t10 * (l + m) * t5 + t16 + t14 * (
+                -m + t41) + lmbd + m - t41) + t11 * l) * k * math.pi / t1 / rho / 2
+
 
 def integrand_M(rho, y1, y2):
-    lmbd = 2*nu/(1-2*nu)
+    lmbd = 2 * nu / (1 - 2 * nu)
     t1 = rho ** 2
     t4 = omega ** 2
     t5 = t4 ** 2
@@ -137,7 +157,11 @@ def integrand_M(rho, y1, y2):
     t24 = t14 ** 2
     t26 = t12 ** 2
     t37 = t1 ** 2
-    return omega * math.pi * t9 * (t37 * (t10 * t7 * t5 + t9 * t4 * (t16 + 4 * t17 + t19 - t20 + 4) + l * t24 + 2 * m * t26 + t12 * (-t20 + t19 + 4) + 2 * m * t13 + t13 * (t19 - n) - 6 * lmbd + n - 4) + t1 * t9 * (2 * t4 * t7 * t9 + t16 + 2 * t17 + t19 - t20 + 4) + t7 * t10) / t1 / rho / 2
+    return omega * math.pi * t9 * (t37 * (
+                t10 * t7 * t5 + t9 * t4 * (t16 + 4 * t17 + t19 - t20 + 4) + l * t24 + 2 * m * t26 + t12 * (
+                    -t20 + t19 + 4) + 2 * m * t13 + t13 * (t19 - n) - 6 * lmbd + n - 4) + t1 * t9 * (
+                                               2 * t4 * t7 * t9 + t16 + 2 * t17 + t19 - t20 + 4) + t7 * t10) / t1 / rho / 2
+
 
 def Q(om, x):
     global k, omega
@@ -149,6 +173,7 @@ def Q(om, x):
         return np.nan
     return simpson(integrand_Q(res_a.x, res_a.y[0], res_a.y[1]), x=res_a.x)
 
+
 def M(om, x):
     global k, omega
     k = x
@@ -158,6 +183,7 @@ def M(om, x):
     if not res_a.success:
         return np.nan
     return simpson(integrand_M(res_a.x, res_a.y[0], res_a.y[1]), x=res_a.x, dx=0.001)
+
 
 def Func_torsion(omegas, nuu, ll, mm, nn):
     global nu, l, m, n
@@ -180,6 +206,7 @@ def Func_torsion(omegas, nuu, ll, mm, nn):
     list3 = [M(omegas[i], k_val[i]) for i in range(len(k_val))]
     return np.array(list3), np.array(k_val)
 
+
 # Func_torsion - omegas, nu, l0, m0, n0
 def test_fun(x: np.ndarray) -> float:
     try:
@@ -196,6 +223,7 @@ def test_fun(x: np.ndarray) -> float:
         print(f"[test_fun] Исключение: {e}")
         return 1e6
 
+
 def test_all_algorithms():
     functions = [
         ("Work_week", test_fun, [(-5, -1), (-15, -10), (-35, -25)], 0, 3)
@@ -204,15 +232,15 @@ def test_all_algorithms():
     algorithms = [
         ("Whale Optimization Algorithm", WhaleOptimizationAlgorithmMP),
         ("Crow Search Algorithm", CrowSearchAlgorithmMP),
-        #("Grey Wolf Optimizer", GreyWolfOptimizerMP),
+        # ("Grey Wolf Optimizer", GreyWolfOptimizerMP),
         ("Emperor Penguin Optimizer", EmperorPenguinOptimizerMP),
         ("Artificial Bee Colony", ArtificialBeeColonyMP)
     ]
 
-    pools = [2, 4]  # Процессы
+    pools = [1, 2, 4, 6]  # Процессы
 
     agents = 20
-    max_iterations = 3
+    max_iterations = 100
     seed = 1
 
     list_of_results = []
@@ -228,15 +256,15 @@ def test_all_algorithms():
 
                 if algo_name == "Crow Search Algorithm":
                     algo = AlgoClass(func, dim, bounds, agents, max_iterations, flight_length=1, awareness_prob=0.1,
-                                     expand_rate=1.2, processes = p)
+                                     expand_rate=1.2, processes=p)
                 elif algo_name == "Artificial Bee Colony":
-                    algo = AlgoClass(func, dim, bounds, agents, max_iterations, limit=25, processes = p)
+                    algo = AlgoClass(func, dim, bounds, agents, max_iterations, limit=25, processes=p)
                 else:
-                    algo = AlgoClass(func, dim, bounds, agents, max_iterations, processes = p)
+                    algo = AlgoClass(func, dim, bounds, agents, max_iterations, processes=p)
 
                 runner = Runner(algo, True)
 
-                result = run_multiple(runner, 1, seed)
+                result = run_multiple(runner, 3, seed)
 
                 list_of_results.append({
                     "Function": func_name,
@@ -251,7 +279,6 @@ def test_all_algorithms():
                     "Pools": p,
                     **result[0],
                 })
-
 
     save_path1 = fr"G:\Code\metaheuristics_lib\week_work\convergence_data.csv"
     df1 = pd.DataFrame(list_of_data)
@@ -309,7 +336,6 @@ def plot_all():
             save_path=fr"G:\Code\metaheuristics_lib\week_work\{p}_time.png"
         )
 
-
     df = pd.read_csv(fr"G:\Code\metaheuristics_lib\week_work\experiment_results.csv", sep=',')
     # Получаем список уникальных алгоритмов
     algs = df["Algorithm"].unique()
@@ -327,10 +353,9 @@ def plot_all():
         plot_speedup_different_pools(
             times_df,
             pools_df,
-            title=f"График ускорения {alg} при выполнении Ackley с искусственным замедлением",
-            save_path=fr"G:\Code\metaheuristics_lib\results_mp\WOA_time.png"
+            title=f"График ускорения {alg} при выполнении test",
+            save_path=fr"G:\Code\metaheuristics_lib\week_work\{alg}_time.png"
         )
-
 
 
 # Параметры материала (медь)
@@ -346,8 +371,7 @@ if k_val_ref is None:
     raise RuntimeError("Не удалось вычислить эталонные значения")
 
 if __name__ == '__main__':
-
-    #test_all_algorithms()
+    test_all_algorithms()
 
     plot_all()
 
@@ -360,4 +384,4 @@ if __name__ == '__main__':
     pd.set_option('display.width', 1000)
     pd.set_option('display.max_colwidth', None)
 
-    print(df_loaded,'\n', df)
+    print(df_loaded, '\n', df)

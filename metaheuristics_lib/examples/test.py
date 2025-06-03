@@ -1,6 +1,5 @@
 from time import sleep
 
-import numpy as np
 import pandas as pd
 
 from algorithms.bee_colony.abc import ArtificialBeeColony
@@ -130,7 +129,7 @@ def test_all_algorithms():
             list_of_results.append({
                 "Function": func_name,
                 "Algorithm": algo_name,
-                **summarize_runs(result, target = 0)
+                **summarize_runs(result, target=0)
             })
 
             list_of_data.append({
@@ -185,20 +184,21 @@ def plot_all():
             histories,
             labels,
             title=f"Сходимость на функции: {func}",
-            save_path = fr"G:\Code\metaheuristics_lib\results\сходимость\{func}_conv.png"
+            save_path=fr"G:\Code\metaheuristics_lib\results\сходимость\{func}_conv.png"
         )
+
         plot_execution_time_comparison(
             times,
             labels,
             title=f"Сравнение времени выполнения алгоритмов на функции: {func}",
-            save_path = fr"G:\Code\metaheuristics_lib\results\время\{func}_time.png"
+            save_path=fr"G:\Code\metaheuristics_lib\results\время\{func}_time.png"
         )
 
 
 if __name__ == '__main__':
     # woa()
 
-    #test_all_algorithms()
+    # test_all_algorithms()
 
     plot_all()
 
