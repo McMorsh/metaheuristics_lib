@@ -9,7 +9,9 @@ from scipy.optimize import *
 from algorithms.bee_colony.abc_mp import ArtificialBeeColonyMP
 from algorithms.crow_search.csa_mp import CrowSearchAlgorithmMP
 from algorithms.emperor_penguin.epo_mp import EmperorPenguinOptimizerMP
+from algorithms.grey_wolf.gwo_mp import GreyWolfOptimizerMP
 from algorithms.whale.woa_mp import WhaleOptimizationAlgorithmMP
+
 from core.runner import Runner
 from plot import plot_execution_time_comparison, plot_convergence, plot_speedup_different_pools
 from utils.metrics import summarize_runs, run_multiple
@@ -225,22 +227,23 @@ def test_fun(x: np.ndarray) -> float:
 
 
 def test_all_algorithms():
+    # задача о кручении была решена при l,m,n = -2.264,-13.082,-33.375 # медь
     functions = [
-        ("Work_week", test_fun, [(-5, -1), (-15, -10), (-35, -25)], 0, 3)
+        ("Work_week", test_fun, [(-7, 3), (-18, -8), (-38, -28)], 0, 3)
     ]
 
     algorithms = [
         ("Whale Optimization Algorithm", WhaleOptimizationAlgorithmMP),
-        ("Crow Search Algorithm", CrowSearchAlgorithmMP),
+        # ("Crow Search Algorithm", CrowSearchAlgorithmMP),
         # ("Grey Wolf Optimizer", GreyWolfOptimizerMP),
-        ("Emperor Penguin Optimizer", EmperorPenguinOptimizerMP),
-        ("Artificial Bee Colony", ArtificialBeeColonyMP)
+        # ("Emperor Penguin Optimizer", EmperorPenguinOptimizerMP),
+        # ("Artificial Bee Colony", ArtificialBeeColonyMP)
     ]
 
     pools = [1, 2, 4, 6]  # Процессы
 
     agents = 20
-    max_iterations = 100
+    max_iterations = 10
     seed = 1
 
     list_of_results = []
@@ -264,7 +267,7 @@ def test_all_algorithms():
 
                 runner = Runner(algo, True)
 
-                result = run_multiple(runner, 3, seed)
+                result = run_multiple(runner, 1, seed)
 
                 list_of_results.append({
                     "Function": func_name,

@@ -13,7 +13,7 @@ def mp_evaluate_fitness(positions: np.ndarray, func: Callable[[np.ndarray], floa
     Каждая позиция – это np.ndarray, возвращается np.ndarray скалярных значений.
     """
     if processes is None:
-        processes = os.cpu_count()
+        processes = os.cpu_count() // 2
 
     with ProcessPoolExecutor(max_workers=processes) as executor:
         results = list(executor.map(func, positions))

@@ -113,9 +113,11 @@ class GreyWolfOptimizer(BaseAlgorithm):
             if fitness[i] < self.alpha_fit:
                 self.alpha_fit = fitness[i]
                 self.alpha_pos = self.wolves[i].copy()
+
             elif fitness[i] < self.beta_fit:
                 self.beta_fit = fitness[i]
                 self.beta_pos = self.wolves[i].copy()
+
             elif fitness[i] < self.delta_fit:
                 self.delta_fit = fitness[i]
                 self.delta_pos = self.wolves[i].copy()
