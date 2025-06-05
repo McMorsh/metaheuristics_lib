@@ -1,8 +1,10 @@
 import math
 import time
+from ast import literal_eval
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from scipy.integrate import solve_bvp, simpson
 from scipy.optimize import *
 
@@ -229,7 +231,7 @@ def test_fun(x: np.ndarray) -> float:
 def test_all_algorithms():
     # задача о кручении была решена при l,m,n = -2.264,-13.082,-33.375 # медь
     functions = [
-        ("Work_week", test_fun, [(-7, 3), (-18, -8), (-38, -28)], 0, 3)
+        ("Work_week", test_fun, [(-3.5, -1), (-16, -10), (-35, -30)], 0, 3)
     ]
 
     algorithms = [
@@ -240,11 +242,11 @@ def test_all_algorithms():
         # ("Artificial Bee Colony", ArtificialBeeColonyMP)
     ]
 
-    pools = [1, 2, 4, 6]  # Процессы
+    pools = [6]  # Процессы
 
     agents = 20
-    max_iterations = 10
-    seed = 1
+    max_iterations = 50
+    seed = None
 
     list_of_results = []
     list_of_data = []
@@ -298,7 +300,7 @@ def plot_all():
     df_conv = pd.read_csv(fr"G:\Code\metaheuristics_lib\week_work\convergence_data.csv", sep=',')
 
     # Преобразуем строку истории в массив
-    df_conv["history"] = df_conv["history"].apply(eval)  # безопасно, если файл твой
+    df_conv["history_of_best_fitness"] = df_conv["history_of_best_fitness"].apply(eval)
     df_conv["time"] = df_conv["time"].apply(eval)
 
     # Получаем список уникальных процессов
@@ -313,7 +315,7 @@ def plot_all():
 
         for _, row in pool_df.iterrows():
             label = row["Algorithm"]
-            all_runs = np.array(row["history"])  # shape = (30, итерации)
+            all_runs = np.array(row["history_of_best_fitness"])  # shape = (30, итерации)
             all_times = np.array(row["time"])  # shape = (30,)
 
             mean_history = np.mean(all_runs, axis=0)
@@ -361,6 +363,7 @@ def plot_all():
         )
 
 
+
 # Параметры материала (медь)
 rho_0 = 0.9
 N = 30
@@ -373,10 +376,62 @@ _, k_val_ref = Func_torsion(omegas_ref, nu_ref, l0_ref, m0_ref, n0_ref)
 if k_val_ref is None:
     raise RuntimeError("Не удалось вычислить эталонные значения")
 
-if __name__ == '__main__':
-    test_all_algorithms()
+def plot_test(x, l_test, m_test, n_test):
 
-    plot_all()
+    l_new = x[:, 0]
+    m_new = x[:, 1]
+    n_new = x[:, 2]
+
+    # График 1: f(x, m, n)
+    y1 = [test_fun([x, m_test, n_test]) for x in l_new]
+
+    # График 2: f(l, y, n)
+    y2 = [test_fun([l_test, y, n_test]) for y in m_new]
+
+    # График 3: f(l, m, z)
+    y3 = [test_fun([l_test, m_test, z]) for z in n_new]
+
+    # Визуализация
+    plt.figure(figsize=(12, 4))
+
+    ax1 = plt.subplot(1, 3, 1)
+    ax1.plot(l_new, y1, marker='o', markersize=3, color='blue', alpha=0.8)
+    ax1.set_title('f(x, m, n)')
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('f(x, m, n)')
+    ax1.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    ax1.minorticks_on()
+
+    ax2 = plt.subplot(1, 3, 2)
+    ax2.plot(m_new, y2, marker='o', markersize=3, color='blue', alpha=0.8)
+    ax2.set_title('f(l, y, n)')
+    ax2.set_xlabel('y')
+    ax2.set_ylabel('f(l, y, n)')
+    ax2.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    ax2.minorticks_on()
+
+    ax3 = plt.subplot(1, 3, 3)
+    ax3.plot(n_new, y3, marker='o', markersize=3, color='blue', alpha=0.8)
+    ax3.set_title('f(l, m, z)')
+    ax3.set_xlabel('z')
+    ax3.set_ylabel('f(l, m, z)')
+    ax3.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    ax3.minorticks_on()
+
+    y = test_fun([l_test, m_test, n_test])
+    ax1.plot(l_test, y, 'ro', markersize=3)
+    ax2.plot(m_test, y, 'ro', markersize=3)
+    ax3.plot(n_test, y, 'ro', markersize=3)
+
+    plt.savefig(fr"G:\Code\metaheuristics_lib\week_work\test_points.png")
+    plt.close()
+
+
+
+if __name__ == '__main__':
+    #test_all_algorithms()
+
+    # plot_all()
 
     df_loaded = pd.read_csv(fr"G:\Code\metaheuristics_lib\week_work\experiment_results.csv", sep=',')
 
@@ -388,3 +443,7 @@ if __name__ == '__main__':
     pd.set_option('display.max_colwidth', None)
 
     print(df_loaded, '\n', df)
+
+    data_min_x_str = df["history_of_best_x"].iloc[0]
+    data_min_x = literal_eval(data_min_x_str)
+    plot_test(np.asarray(data_min_x),-2.264,-13.082,-33.375)

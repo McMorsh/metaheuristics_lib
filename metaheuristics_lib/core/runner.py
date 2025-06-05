@@ -20,7 +20,7 @@ class Runner:
         self.f = iteration_info
         self.seed = seed if seed else self.algorithm.params.get('seed')
 
-    def run(self) -> (Dict[str, Any], List[float]):
+    def run(self):
         """
         Запустить алгоритм.
         Читает max_iter из algorithm.params['max_iter'].
@@ -44,14 +44,16 @@ class Runner:
         total_start = time.perf_counter()
         self.algorithm.initialize()
 
-        history: List[float] = []
+        history_of_best_fitness: List[float] = []
+        history_of_best_x: List[float] = []
         # Записываем значение до итераций
         try:
-            current = self.algorithm.get_result()['minimum_value']
+            current = self.algorithm.get_result()
         except Exception:
-            current = None
+            current["minimum_value"] = None
         if current is not None:
-            history.append(current)
+            history_of_best_x.append(current["minimum_x"])
+            history_of_best_fitness.append(current["minimum_value"])
 
         # Основной цикл
         for i in range(max_iter):
@@ -60,15 +62,17 @@ class Runner:
             self.algorithm.iterate()
             elapsed_iter = time.perf_counter() - iter_start
             res = self.algorithm.get_result()
-            history.append(res['minimum_value'])
+            history_of_best_fitness.append(res['minimum_value'])
+            history_of_best_x.append(res["minimum_x"])
             if self.f:
                 logger.info(f"Iteration {i + 1} end, time = {elapsed_iter:.4f}c,"
-                            f" "f"the best f = {current:.4e}")
+                            f"the best f = {res["minimum_value"]:.4e}, x = {res["minimum_x"]}")
 
         # Финальный результат
         total_elapsed = time.perf_counter() - total_start
         result = self.algorithm.get_result()
         if self.f:
             logger.info(f"Algorithm end: the best f = {result['minimum_value']:.4e}; "
-                        f"time = {total_elapsed:.4f}c")
-        return result, history, total_elapsed
+                        f"x = {result["minimum_x"]}, time = {total_elapsed:.4f}c")
+
+        return result, history_of_best_fitness, history_of_best_x, total_elapsed

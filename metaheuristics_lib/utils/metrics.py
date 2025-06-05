@@ -79,22 +79,31 @@ def run_multiple(runner, runs: int = 30, seed=None):
     :return: 1
     """
     results = []
-    list_of_best = []
+    list_of_best_fitness = []
+    list_of_best_x = []
     list_of_history = []
     list_of_time = []
+    list_of_min_x = []
 
     for i in range(runs):
         if seed is not None:
             runner.seed = seed + i
 
-        best, history, elapsed_time = runner.run()
-        list_of_best.append(best["minimum_value"])
-        list_of_history.append(history)
+        best, history_of_best_fitness, history_of_best_x, elapsed_time = runner.run()
+
+        list_of_best_fitness.append(best["minimum_value"])
+        list_of_history.append(history_of_best_fitness)
+
+        list_of_best_x.append(best["minimum_x"])
+        list_of_min_x.append(history_of_best_x)
+
         list_of_time.append(elapsed_time)
 
     results.append({
-        "best": list_of_best,
-        "history": list_of_history,
+        "best_fitness": list_of_best_fitness,
+        "history_of_best_fitness": list_of_history,
+        "best_x": list_of_best_x,
+        "history_of_best_x": list_of_min_x[0],
         "time": list_of_time
     })
 
@@ -117,18 +126,18 @@ def summarize_runs(results: list[dict[str, list[float]]], target: Optional[float
     :return: словарь со статистиками
     """
 
-    aucs = [area_under_curve(h, normalize=True) for h in results[0]["history"]]
+    aucs = [area_under_curve(h, normalize=True) for h in results[0]["history_of_best_fitness"]]
 
     summary = {
-        'mean_final': float(np.mean(results[0]["best"])),
-        'std_final': float(np.std(results[0]["best"])),
+        'mean_final': float(np.mean(results[0]["best_fitness"])),
+        'std_final': float(np.std(results[0]["best_fitness"])),
         'mean_auc': float(np.mean(aucs)),
         'std_auc': float(np.std(aucs)),
         'time': float(np.mean(results[0]["time"])),
     }
 
     if target is not None:
-        tts = [time_to_target(h, target) for h in results[0]["history"]]
+        tts = [time_to_target(h, target) for h in results[0]["history_of_best_fitness"]]
         # фильтруем None
         tts_valid = [t for t in tts if t is not None]
         summary['mean_time_to_target'] = float(np.mean(tts_valid)) if tts_valid else None

@@ -150,10 +150,10 @@ def test_all_algorithms():
 
 
 def plot_all():
-    df = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\convergence_data_new.csv", sep=',')
+    df = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\convergence_data.csv", sep=',')
 
     # Преобразуем строку истории в массив
-    df["history"] = df["history"].apply(eval)  # безопасно, если файл твой
+    df["history_of_best_fitness"] = df["history_of_best_fitness"].apply(eval)
     df["time"] = df["time"].apply(eval)
 
     # Получаем список уникальных функций
@@ -168,7 +168,7 @@ def plot_all():
 
         for _, row in func_df.iterrows():
             label = row["Algorithm"]
-            all_runs = np.array(row["history"])  # shape = (30, итерации)
+            all_runs = np.array(row["history_of_best_fitness"])  # shape = (30, итерации)
             all_times = np.array(row["time"])  # shape = (30,)
 
             mean_history = np.mean(all_runs, axis=0)
@@ -198,11 +198,11 @@ def plot_all():
 if __name__ == '__main__':
     # woa()
 
-    # test_all_algorithms()
+    #test_all_algorithms()
 
     plot_all()
 
-    df_loaded = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\experiment_results_new.csv", sep=',')
+    df_loaded = pd.read_csv(fr"G:\Code\metaheuristics_lib\results\experiment_results.csv", sep=',')
 
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
