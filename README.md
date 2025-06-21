@@ -20,25 +20,25 @@ metaheuristics_lib/
 ├── metaheuristics_lib/
 │   ├── algorithms/
 │   │   ├── bee_colony/
-│   │   │   ├── abc.py
-│   │   │   ├── abc_mp.py
-│   │   │   └── abc_mpi.py
+│   │   │   ├── artificial_bee_colony.py
+│   │   │   ├── artificial_bee_colony_mp.py
+│   │   │   └── artificial_bee_colony_mpi.py
 │   │   ├── crow_search/
-│   │   │   ├── csa.py
-│   │   │   ├── csa_mp.py
-│   │   │   └── csa_mpi.py
+│   │   │   ├── crow_search_algorithm.py
+│   │   │   ├── crow_search_algorithm_mp.py
+│   │   │   └── crow_search_algorithm_mpi.py
 │   │   ├── emperor_pengiun/
-│   │   │   ├── epo.py
-│   │   │   ├── epo_mp.py
-│   │   │   └── epo_mpi.py
+│   │   │   ├── emperor_penguin_optimizer.py
+│   │   │   ├── emperor_penguin_optimizer_mp.py
+│   │   │   └── emperor_penguin_optimizer_mpi.py
 │   │   ├── grey_wolf/
-│   │   │   ├── gwo.py
-│   │   │   ├── gwo_mp.py
-│   │   │   └── gwo_mpi.py
+│   │   │   ├── grey_wolf_optimizer.py
+│   │   │   ├── grey_wolf_optimizer_mp.py
+│   │   │   └── grey_wolf_optimizer_mpi.py
 │   │   ├── whale/
-│   │   │   ├── woa.py
-│   │   │   ├── woa_mp.py
-│   │   │   └── woa_mpi.py
+│   │   │   ├── whale_optimization_algorithm.py
+│   │   │   ├── whale_optimization_algorithm_mp.py
+│   │   │   └── whale_optimization_algorithm_mpi.py
 │   ├── utils/
 │   │   ├── algorithm_utils.py
 │   │   ├── logger.py
