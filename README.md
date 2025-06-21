@@ -6,7 +6,7 @@
 
 ## Особенности
 
-- Набор алгоритмов: Artificial Bee Colony, Particle Swarm Optimization, Grey Wolf Optimizer, Whale Optimization и Emperor Penguin Optimizer.
+- Набор алгоритмов: Artificial Bee Colony, Crow Search Algorithm, Grey Wolf Optimizer, Whale Optimization Algorithm и Emperor Penguin Optimizer.
 - Поддержка многопроцессной и распределённой (MPI) обработки популяции.
 - Инструменты: логирование, визуализация, сбор метрик (AUC, скорость сходимости, time-to-target и др.).
 - Чёткая модульная архитектура: легко расширять за счёт новых задач или алгоритмов.
