@@ -1,5 +1,5 @@
 from algorithms.crow_search.csa import CrowSearchAlgorithm
-from algorithms.whale.woa import WhaleOptimizationAlgorithm
+from algorithms.whale.whale_optimization_algorithm import WhaleOptimizationAlgorithm
 from core.runner import Runner
 from problems.continuous import rastrigin
 from utils.metrics import time_to_target, area_under_curve, best_so_far, run_multiple, summarize_runs

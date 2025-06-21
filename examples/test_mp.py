@@ -1,4 +1,4 @@
-from algorithms.whale.woa_mp import WhaleOptimizationAlgorithmMP
+from algorithms.whale.whale_optimization_algorithm_mp import WhaleOptimizationAlgorithmMP
 from core.runner import Runner
 from problems.continuous import sphere
 from utils.plot import plot_speedup_different_pools
