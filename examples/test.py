@@ -1,4 +1,4 @@
-from algorithms.crow_search.csa import CrowSearchAlgorithm
+from algorithms.crow_search.crow_search_algorithm import CrowSearchAlgorithm
 from algorithms.whale.whale_optimization_algorithm import WhaleOptimizationAlgorithm
 from core.runner import Runner
 from problems.continuous import rastrigin
