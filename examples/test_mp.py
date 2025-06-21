@@ -13,7 +13,7 @@ def test_alg():
     list_of_time = []
     
     for p in list_of_process:
-        # 1. Инициализация алгоритма с параметрами:
+        # Инициализация алгоритма:
         # - sphere: тестовая функция
         # - 10: размерность задачи
         # - (-10, 10): границы поиска
@@ -23,17 +23,21 @@ def test_alg():
         # - process=p: количество процессов
         algo = WhaleOptimizationAlgorithmMP(sphere, 10, (-10, 10), 20, 200, 42, process=p)
 
-        # 2. Создание и запуск (Runner) - обертка для выполнения алгоритма
-        runner = Runner(algo, False)  # Создаем Runner с отключенным подробным выводом
+        # Создание и запуск обертки для выполнения алгоритма
+        runner = Runner(algo, False)
         _, _, _, total_elapsed = runner.run()
 
-        # 3. Добавление времени выполнения
         list_of_time.append(total_elapsed)
         
-    # 4. Построение графика ускорения
+    # Построение графика ускорения
     plot_speedup_different_pools(
         list_of_time,
         list_of_process,
         title=f"График ускорения WOA",
         save_path=fr"G:\...\WOA_time.png"
     )
+
+
+if __name__ == '__main__':
+    print("Тест Whale Optimization Algorithm MP")
+    test_alg()
