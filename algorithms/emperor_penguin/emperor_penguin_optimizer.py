@@ -1,133 +1,66 @@
-from typing import Dict, Any
+"""Emperor Penguin Optimizer (EPO)."""
 
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import initialize_bounds, evaluate_fitness_serial, initialize_positions, enforce_boundaries
 
 
 class EmperorPenguinOptimizer(BaseAlgorithm):
-    """
-    Emperor Penguin Optimizer
+    """Метаэвристический алгоритм Emperor Penguin Optimizer.
 
-    Реализует метаэвристический алгоритм глобальной оптимизации,
-    вдохновлённый социальным поведением императорских пингвинов
-    при совместном поиске пищи и сохранении тепла.
+    Алгоритм моделирует поведение императорских пингвинов при
+    совместном поиске пищи и сохранении тепла.
 
-    Parameters
-    ----------
-    problem : Callable[[np.ndarray], float]
-        Целевая функция, которую необходимо минимизировать.
-    dim : int
-        Размерность пространства поиска.
-    bounds : Sequence[Tuple[float, float]]
-        Список (low, high)-кортежей с границами для каждой размерности.
-    agents : int
-        Число агентов (размер популяции пингвинов).
-    max_iter : int
-        Максимальное число итераций алгоритма.
-    seed : int, optional
-        Seed для инициализации генератора случайных чисел.
+    Args:
+        problem: целевая функция.
+        dim: размерность пространства поиска.
+        bounds: границы поиска.
+        agents: число пингвинов.
+        max_iter: максимальное число итераций.
+        seed: seed генератора случайных чисел.
 
-    Attributes
-    ----------
-    penguins : np.ndarray, shape (agents, dim)
-        Текущие позиции всех агентов (пингвинов).
-    fitness : np.ndarray, shape (agents,)
-        Значения целевой функции для каждой позиции.
-    best_penguin : np.ndarray, shape (dim,)
-        Лучшая найденная позиция (минимум среди агентов).
-    best_fitness : float
-        Значение целевой функции в best_penguin.
-    iteration : int
-        Текущий номер итерации.
-
-    Methods
-    -------
-    initialize()
-        Инициализация популяции и памяти агентов.
-    iterate()
-        Одна итерация обновления позиций согласно правилам CSA.
-    get_result() -> Dict[str, Any]
-        Возвращает словарь с ключами `minimum_x` и `minimum_value`.
-
-    Примечания
-    ----------
+    Attributes:
+        penguins: текущие позиции пингвинов формы ``(agents, dim)``.
+        fitness: значения функции для текущих позиций.
     """
 
     def initialize(self) -> None:
-        # Сохраняем функцию оптимизации и размерность задачи
-        self.fitness_function = self.problem
-        self.problem_dimen = self.dim
-        self._bounds = self.bounds
-        self.n_penguins = self.agents
-        self._max_iter = self.max_iter
-
-        # Инициализируем генератор случайных чисел при наличии seed
-        if self.seed is not None:
-            np.random.seed(self.seed)
-
-        # Определяем начальные границы поиска
-        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
-
-        # Генерируем начальные позиции пингвинов равномерно в пределах границ
-        self.penguins = initialize_positions(self.n_penguins, self.problem_dimen, self._bounds, self.seed)
-
-        # Оцениваем начальный фитнес всех пингвинов
-        self.fitness = evaluate_fitness_serial(self.penguins, self.fitness_function)
-
-        # Определяем лучшего пингвина (минимум функции
-        self.best_penguin = self.penguins[np.argmin(self.fitness)]
-        self.best_fitness = float(np.min(self.fitness))
-
+        """Инициализирует популяцию пингвинов."""
+        self._reset_state()
+        self.penguins = self._initial_positions()
+        self.fitness = self.evaluator.evaluate(self.penguins)
+        self._update_best(self.penguins, self.fitness)
         self.iteration = 0
 
     def iterate(self) -> None:
-        """
-        Одна итерация EPO обновляет позиции пчел.
-        """
-        # Обновляем параметр a, уменьшающийся от 2 до 0
-        a = 2 - 2 * (self.iteration / self.max_iter)
+        """Выполняет одну итерацию EPO."""
+        progress = self.iteration / self.max_iter
+        # В исходной формуле R равномерно в [0, 1], поэтому T всегда 1.
+        radius = self.rng.random()
+        temperature = 1.0 if radius <= 1.0 else 0.0
+        adjusted_temperature = temperature - progress
 
-        # Случайный радиус huddle и температура
-        R = np.random.rand()  # Радиус скопления
-        T = 1 if R <= 1 else 0  # Температура внутри скопления
-        T_prime = T - (self.iteration / self.max_iter)  # Скорректированная температура
+        for index in range(self.agents):
+            best = self._best_position()
+            distance = np.abs(best - self.penguins[index])
+            move = (
+                2.0 * adjusted_temperature
+                + distance * self.rng.random(self.dim)
+                - adjusted_temperature
+            )
+            random_vector = self.rng.random(self.dim)
+            modulated = np.abs(random_vector * best - self.penguins[index])
+            new_position = self.penguins[index] + move * modulated
+            new_position = self._clip(new_position)
 
-        for i in range(self.n_penguins):
-            # Расстояние от пингвина до глобального лидера
-            Pgrid = abs(self.best_penguin - self.penguins[i])
-
-            # Вектор A (моделирует движение в сторону лидера с учётом температуры)
-            A_vec = (2 * T_prime + Pgrid * np.random.rand(self.problem_dimen)) - T_prime
-
-            # Случайный вектор C
-            C_vec = np.random.rand(self.problem_dimen)
-
-            # Вектор D (модулированное расстояние)
-            D_vec = abs(C_vec * self.best_penguin - self.penguins[i])
-
-            # Обновление позиции
-            new_pos = self.penguins[i] + A_vec * D_vec
-
-            # Проверяем границы поиска
-            new_pos = enforce_boundaries(new_pos, self._bounds)
-
-            # Распределённая оценка фитнеса после обновления
-            new_fitness = self.fitness_function(new_pos)
-
-            if new_fitness < self.fitness[i]:
-                self.penguins[i] = new_pos
-                self.fitness[i] = new_fitness
-
+            new_fitness = float(
+                self.evaluator.evaluate(new_position.reshape(1, self.dim))[0]
+            )
+            if new_fitness < self.fitness[index]:
+                self.penguins[index] = new_position
+                self.fitness[index] = new_fitness
                 if new_fitness < self.best_fitness:
-                    self.best_fitness = float(new_fitness)
-                    self.best_penguin = new_pos.copy()
+                    self.best_fitness = new_fitness
+                    self.best_solution = new_position.copy()
 
         self.iteration += 1
-
-    def get_result(self) -> Dict[str, Any]:
-        """
-        Возвращает словарь с лучшим найденным решением.
-        """
-        return {"minimum_x": self.best_penguin.tolist(), "minimum_value": float(self.best_fitness)}

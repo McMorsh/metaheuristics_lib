@@ -1,124 +1,70 @@
-from typing import Any, Dict
+"""Whale Optimization Algorithm (WOA)."""
 
 import numpy as np
 
 from core.algorithm import BaseAlgorithm
-from utils.algorithm_utils import evaluate_fitness_serial, initialize_bounds, initialize_positions, enforce_boundaries
-from utils.logger import get_logger
-
-logger = get_logger(__name__, level="INFO", log_to_file=False)
 
 
 class WhaleOptimizationAlgorithm(BaseAlgorithm):
-    """
-    Whale Optimization Algorithm (WOA)
+    """Метаэвристический алгоритм Whale Optimization Algorithm.
 
-    Реализует метаэвристический алгоритм оптимизации,
-    вдохновлённый социальным поведением горбатых китов при охоте:
-    обволакивание жертвы пузырным облаком и её захват.
+    Алгоритм моделирует охоту горбатых китов: обволакивание жертвы,
+    спиральное движение и исследование пространства.
 
-    Parameters
-    ----------
-    problem : Callable[[np.ndarray], float]
-        Целевая функция для минимизации.
-    dim : int
-        Размерность пространства поиска.
-    bounds : Sequence[Tuple[float, float]]
-        Границы поиска для каждой размерности в формате (low, high).
-    agents : int
-        Количество агентов (китов) в популяции.
-    max_iter : int
-        Максимальное число итераций.
-    seed : int, optional
-        Seed для генератора случайных чисел.
+    Args:
+        problem: целевая функция.
+        dim: размерность пространства поиска.
+        bounds: границы поиска.
+        agents: число китов.
+        max_iter: максимальное число итераций.
+        seed: seed генератора случайных чисел.
 
-    Attributes
-    ----------
-    whales : np.ndarray, shape (agents, dim)
-        Текущие позиции агентов.
-    fitness : np.ndarray, shape (agents,)
-        Значения целевой функции для каждой позиции.
-    best_whale : np.ndarray, shape (dim,)
-        Лучшая найденная позиция (минимум).
-    best_fitness : float
-        Значение функции в best_whale.
-    iteration : int
-        Счетчик итераций.
-
-    Methods
-    -------
-    initialize()
-        Инициализация популяции и памяти агентов.
-    iterate()
-        Одна итерация обновления позиций согласно правилам CSA.
-    get_result() -> Dict[str, Any]
-        Возвращает словарь с ключами `minimum_x` и `minimum_value`.
+    Attributes:
+        whales: текущие позиции китов формы ``(agents, dim)``.
+        fitness: значения функции для текущих позиций.
     """
 
     def initialize(self) -> None:
-        # Сохраняем функцию оптимизации и размерность задачи
-        self.fitness_function = self.problem
-        self.problem_dimen = self.dim
-        self._bounds = self.bounds
-        self.n_whales = self.agents
-        self._max_iter = self.max_iter
-
-        # Инициализируем генератор случайных чисел при наличии seed
-        if self.seed is not None:
-            np.random.seed(self.seed)
-
-        # Определяем начальные границы поиска
-        self._bounds = initialize_bounds(self.problem_dimen, self._bounds)
-
-        # Инициализация популяции китов
-        self.whales = initialize_positions(self.n_whales, self.problem_dimen, self._bounds, self.seed)
-        # print(self.whales)
-
-        # Вычисление значений fitness для всех китов
-        fitness = evaluate_fitness_serial(self.whales, self.fitness_function)
-
-        # print(fitness)
-        self.best_whale = self.whales[np.argmin(fitness)]  # Лучший кит
-        self.best_fitness = float(np.min(fitness))  # Минимум функции
-
+        """Инициализирует популяцию китов."""
+        self._reset_state()
+        self.whales = self._initial_positions()
+        self.fitness = self.evaluator.evaluate(self.whales)
+        self._update_best(self.whales, self.fitness)
         self.iteration = 0
 
     def iterate(self) -> None:
-        """
-        Одна итерация WOA обновляет позиции китов.
-        """
-        # Линейное уменьшение параметра a от 2 до 0
-        a = 2 - 2 * self.iteration / self._max_iter  # Линейное уменьшение параметра a
+        """Выполняет одну итерацию WOA."""
+        a = 2.0 - 2.0 * self.iteration / self.max_iter
+        best = self._best_position()
 
-        for i in range(self.n_whales):
-            A = 2 * a * np.random.rand() - a  # коэфф. сжатия/разжатия
-            C = 2 * np.random.rand()  # коэфф. перемещения
+        for index in range(self.agents):
+            coefficient_a = 2.0 * a * self.rng.random() - a
+            coefficient_c = 2.0 * self.rng.random()
+            probability = self.rng.random()
 
-            if np.random.rand() < 0.5:
-                # Обновление позиции по модели сжатия
-                D = abs(C * self.best_whale - self.whales[i])
-                new_pos = self.best_whale - A * D
+            if probability < 0.5:
+                if abs(coefficient_a) < 1.0:
+                    distance = np.abs(
+                        coefficient_c * best - self.whales[index]
+                    )
+                    new_position = best - coefficient_a * distance
+                else:
+                    random_index = int(self.rng.integers(0, self.agents))
+                    random_whale = self.whales[random_index]
+                    distance = np.abs(
+                        coefficient_c * random_whale - self.whales[index]
+                    )
+                    new_position = random_whale - coefficient_a * distance
             else:
-                # Спиральное обновление
-                D = abs(self.best_whale - self.whales[i])
-                l = np.random.uniform(-1, 1)  # Коэффициент логарифмической спирали
-                new_pos = D * np.exp(l) * np.cos(2 * np.pi * l) + self.best_whale
+                distance = np.abs(best - self.whales[index])
+                spiral = self.rng.uniform(-1.0, 1.0)
+                new_position = (
+                    distance * np.exp(spiral) * np.cos(2.0 * np.pi * spiral)
+                    + best
+                )
 
-            # Ограничение позиций китов в пределах bounds
-            self.whales[i] = enforce_boundaries(new_pos, self._bounds)
+            self.whales[index] = self._clip(new_position)
 
-        # Обновление fitness
-        fitness = evaluate_fitness_serial(self.whales, self.fitness_function)
-
-        current_best = float(np.min(fitness))
-        if current_best < self.best_fitness:
-            self.best_fitness = current_best
-            self.best_whale = self.whales[np.argmin(fitness)]
-
+        self.fitness = self.evaluator.evaluate(self.whales)
+        self._update_best(self.whales, self.fitness)
         self.iteration += 1
-
-    def get_result(self) -> Dict[str, Any]:
-        """
-        Возвращает словарь с лучшим найденным решением.
-        """
-        return {"minimum_x": self.best_whale.tolist(), "minimum_value": float(self.best_fitness)}
