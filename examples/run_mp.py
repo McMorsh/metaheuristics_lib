@@ -1,6 +1,9 @@
 """Демонстрация WOA с пулом процессов и графиком ускорения."""
 
 import argparse
+import multiprocessing
+import sys
+from multiprocessing.context import BaseContext
 from pathlib import Path
 
 from algorithms.whale.whale_optimization_algorithm_mp import (
@@ -11,6 +14,16 @@ from problems.continuous import sphere
 from utils.plot import plot_speedup_different_pools
 
 
+def _process_context() -> BaseContext | None:
+    """Возвращает fork-контекст, если он доступен."""
+    if (
+        sys.platform.startswith("linux")
+        and "fork" in multiprocessing.get_all_start_methods()
+    ):
+        return multiprocessing.get_context("fork")
+    return None
+
+
 def test_alg(
     iterations: int,
     agents: int,
@@ -19,6 +32,7 @@ def test_alg(
 ) -> None:
     """Запускает WOA с разным числом процессов."""
     elapsed_times: list[float] = []
+    process_context = _process_context()
 
     for processes in process_counts:
         algorithm = WhaleOptimizationAlgorithmMP(
@@ -29,6 +43,7 @@ def test_alg(
             iterations,
             42,
             processes=processes,
+            mp_context=process_context,
         )
 
         with Runner(algorithm, iteration_info=False) as runner:

@@ -1,5 +1,6 @@
 """Artificial Bee Colony с пулом процессов."""
 
+from multiprocessing.context import BaseContext
 from typing import Any
 
 from algorithms._common import resolve_processes
@@ -20,6 +21,7 @@ class ArtificialBeeColonyMP(ArtificialBeeColony):
         seed: seed генератора случайных чисел.
         processes: число процессов, ``None`` - по числу ядер.
         process: устаревший синоним ``processes``.
+        mp_context: контекст multiprocessing; ``None`` - стандартный.
         **params: дополнительные параметры ABC.
     """
 
@@ -34,6 +36,7 @@ class ArtificialBeeColonyMP(ArtificialBeeColony):
         *,
         processes: int | None = None,
         process: int | None = None,
+        mp_context: BaseContext | None = None,
         **params: Any,
     ) -> None:
         resolved = resolve_processes(processes, process)
@@ -48,6 +51,7 @@ class ArtificialBeeColonyMP(ArtificialBeeColony):
             evaluator=ProcessPoolEvaluator(
                 problem,
                 max_workers=resolved,
+                mp_context=mp_context,
             ),
             **params,
         )

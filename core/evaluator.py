@@ -2,6 +2,7 @@
 
 import os
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing.context import BaseContext
 from types import TracebackType
 from typing import Any, Protocol, Self
 
@@ -74,6 +75,13 @@ class ProcessPoolEvaluator:
 
     Пул создаётся лениво при первом вызове и переиспользуется до
     :meth:`close`.
+
+    Args:
+        objective: целевая функция.
+        max_workers: число процессов; ``None`` означает число ядер.
+        chunksize: размер порции задач для пула.
+        mp_context: контекст multiprocessing; ``None`` означает
+            стандартный контекст платформы.
     """
 
     def __init__(
@@ -81,6 +89,7 @@ class ProcessPoolEvaluator:
         objective: Objective,
         max_workers: int | None = None,
         chunksize: int | None = None,
+        mp_context: BaseContext | None = None,
     ) -> None:
         if max_workers is not None and max_workers < 1:
             raise ValueError(
@@ -95,6 +104,7 @@ class ProcessPoolEvaluator:
         self._objective = objective
         self._max_workers = max_workers
         self._chunksize = chunksize
+        self._mp_context = mp_context
         self._executor: ProcessPoolExecutor | None = None
 
     def evaluate(
@@ -121,7 +131,10 @@ class ProcessPoolEvaluator:
 
     def _get_executor(self) -> ProcessPoolExecutor:
         if self._executor is None:
-            self._executor = ProcessPoolExecutor(max_workers=self._max_workers)
+            self._executor = ProcessPoolExecutor(
+                max_workers=self._max_workers,
+                mp_context=self._mp_context,
+            )
         return self._executor
 
     def close(self) -> None:
