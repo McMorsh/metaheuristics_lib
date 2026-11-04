@@ -26,6 +26,35 @@ def _save_or_show(save_path: SavePath) -> None:
     plt.close()
 
 
+def _normalize_histories(
+    histories: Sequence[float]
+    | Sequence[Sequence[float]]
+    | npt.NDArray[np.float64],
+) -> list[list[float]]:
+    """Приводит одну или несколько историй к списку списков."""
+    if isinstance(histories, np.ndarray):
+        array = np.asarray(histories, dtype=np.float64)
+        if array.size == 0:
+            raise ValueError("Список историй не должен быть пустым")
+        if array.ndim == 1:
+            return [[float(value) for value in array]]
+        if array.ndim == 2:
+            return [[float(value) for value in row] for row in array]
+        raise ValueError("Истории должны быть одномерными или двумерными")
+
+    items = list(histories)
+    if not items:
+        raise ValueError("Список историй не должен быть пустым")
+
+    first = items[0]
+    if isinstance(first, (int, float, np.integer, np.floating)):
+        scalar_items = cast(Sequence[float], items)
+        return [[float(value) for value in scalar_items]]
+
+    sequence_items = cast(Sequence[Sequence[float]], items)
+    return [[float(value) for value in history] for history in sequence_items]
+
+
 def plot_builder(
     fitness_func: Objective,
     bounds: BoundsLike,
@@ -186,7 +215,9 @@ def plot_fitness_function(
 
 
 def plot_convergence(
-    histories: Sequence[float] | Sequence[Sequence[float]],
+    histories: Sequence[float]
+    | Sequence[Sequence[float]]
+    | npt.NDArray[np.float64],
     labels: str | Sequence[str] | None = None,
     title: str = "График сравнения сходимости",
     save_path: SavePath = None,
@@ -200,19 +231,9 @@ def plot_convergence(
         save_path: путь сохранения или ``None`` для показа.
 
     Raises:
-        ValueError: если список историй пуст.
+        ValueError: если список историй пуст или форма неверна.
     """
-    if not histories:
-        raise ValueError("Список историй не должен быть пустым")
-
-    first = histories[0]
-    if isinstance(first, (int, float, np.floating)):
-        history_list = [list(cast(Sequence[float], histories))]
-    else:
-        history_list = [
-            list(history)
-            for history in cast(Sequence[Sequence[float]], histories)
-        ]
+    history_list = _normalize_histories(histories)
 
     if isinstance(labels, str):
         label_list = [labels]
@@ -240,7 +261,7 @@ def plot_convergence(
 
 
 def plot_execution_time_comparison(
-    times: Sequence[float],
+    times: Sequence[float] | npt.NDArray[np.float64],
     labels: Sequence[str],
     title: str = "Сравнение времени выполнения алгоритмов",
     save_path: SavePath = None,
@@ -254,24 +275,32 @@ def plot_execution_time_comparison(
         save_path: путь сохранения или ``None`` для показа.
 
     Raises:
-        ValueError: если длины списков не совпадают или они пусты.
+        ValueError: если длины списков не совпадают, списки пусты,
+            времена нечисловые или неположительные.
     """
-    if len(times) != len(labels):
+    try:
+        time_values = [float(value) for value in times]
+    except (TypeError, ValueError) as error:
+        raise ValueError("Времена должны быть числами") from error
+    label_values = [str(label) for label in labels]
+    if len(time_values) != len(label_values):
         raise ValueError(
             "Количество времён и названий алгоритмов должно совпадать"
         )
-    if not times:
+    if not time_values:
         raise ValueError("Список времён не должен быть пустым")
+    if any(not np.isfinite(value) or value <= 0.0 for value in time_values):
+        raise ValueError("Времена должны быть положительными")
 
     figure = plt.figure(figsize=(12, 6))
-    colors = plt.cm.tab10(np.linspace(0, 1, len(labels)))
-    bars = plt.bar(labels, times, color=colors)
+    colors = plt.cm.tab10(np.linspace(0, 1, len(label_values)))
+    bars = plt.bar(label_values, time_values, color=colors)
     plt.ylabel("Время (сек)", fontsize=18)
     plt.title(title, fontsize=18, pad=20)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
 
-    max_time = max(times)
+    max_time = max(time_values)
     plt.ylim(top=max_time * 1.20)
     for bar in bars:
         height = bar.get_height()
@@ -291,7 +320,7 @@ def plot_execution_time_comparison(
 
 
 def plot_speedup_different_pools(
-    times: Sequence[float],
+    times: Sequence[float] | npt.NDArray[np.float64],
     threads: Sequence[int],
     title: str = "График ускорения",
     save_path: SavePath = None,
@@ -305,26 +334,29 @@ def plot_speedup_different_pools(
         save_path: путь сохранения или ``None`` для показа.
 
     Raises:
-        ValueError: если длины списков не совпадают, списки пусты или
-            базовое время неположительно.
+        ValueError: если длины списков не совпадают, списки пусты,
+            времена нечисловые или хотя бы одно время неположительно.
     """
-    if len(times) != len(threads):
+    try:
+        time_values = [float(value) for value in times]
+    except (TypeError, ValueError) as error:
+        raise ValueError("Времена должны быть числами") from error
+    process_values = list(threads)
+    if len(time_values) != len(process_values):
         raise ValueError(
             "Количество времён и чисел процессов должно совпадать"
         )
-    if not times:
+    if not time_values:
         raise ValueError("Список времён не должен быть пустым")
-    if times[0] <= 0:
-        raise ValueError(
-            f"Базовое время должно быть положительным, получено {times[0]}"
-        )
+    if any(not np.isfinite(value) or value <= 0.0 for value in time_values):
+        raise ValueError("Все времена должны быть положительными")
 
-    speedup = times[0] / np.asarray(times, dtype=np.float64)
-    positions = np.arange(len(threads))
+    speedup = time_values[0] / np.asarray(time_values, dtype=np.float64)
+    positions = np.arange(len(process_values))
 
     plt.figure(figsize=(12, 6))
     bars = plt.bar(positions, speedup, color="skyblue")
-    plt.xticks(positions, [str(value) for value in threads])
+    plt.xticks(positions, [str(value) for value in process_values])
     plt.ylabel("Ускорение")
     plt.xlabel("Количество процессов")
     plt.title(title)

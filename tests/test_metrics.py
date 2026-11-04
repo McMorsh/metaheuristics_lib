@@ -1,5 +1,6 @@
 """Тесты метрик сходимости."""
 
+import numpy as np
 import pytest
 
 from algorithms.whale.whale_optimization_algorithm import (
@@ -52,8 +53,19 @@ def test_best_so_far_accepts_empty_history() -> None:
     assert best_so_far([]) == []
 
 
+def test_best_so_far_rejects_matrix() -> None:
+    with pytest.raises(ValueError, match="одномерной"):
+        best_so_far(np.array([[1.0, 2.0]]))
+
+
 def test_area_under_curve_normalizes() -> None:
     assert area_under_curve([1.0, 1.0, 1.0]) == pytest.approx(2.0 / 3.0)
+
+
+def test_area_under_curve_accepts_numpy_history() -> None:
+    assert area_under_curve(
+        np.array([1.0, 1.0, 1.0]),
+    ) == pytest.approx(2.0 / 3.0)
 
 
 def test_area_under_curve_rejects_empty_history() -> None:
@@ -65,12 +77,31 @@ def test_time_to_target_returns_first_index() -> None:
     assert time_to_target([5.0, 4.0, 3.0], 4.0) == 1
 
 
+def test_time_to_target_accepts_numpy_history() -> None:
+    assert (
+        time_to_target(
+            np.array([5.0, 4.0, 3.0]),
+            4.0,
+        )
+        == 1
+    )
+
+
 def test_time_to_target_returns_none() -> None:
     assert time_to_target([5.0], 1.0) is None
 
 
+def test_time_to_target_rejects_matrix() -> None:
+    with pytest.raises(ValueError, match="одномерной"):
+        time_to_target(np.array([[5.0, 4.0]]), 4.0)
+
+
 def test_mean_best() -> None:
     assert mean_best([[1.0, 2.0], [3.0, 4.0]]) == 2.0
+
+
+def test_mean_best_accepts_numpy_histories() -> None:
+    assert mean_best([np.array([1.0, 2.0]), np.array([3.0, 4.0])]) == 2.0
 
 
 def test_mean_best_rejects_empty_list() -> None:

@@ -4,11 +4,12 @@ from collections.abc import Sequence
 from typing import TypedDict
 
 import numpy as np
+import numpy.typing as npt
 
 from core.runner import Runner
 
-type History = Sequence[float]
-type HistoryList = Sequence[Sequence[float]]
+type History = Sequence[float] | npt.NDArray[np.float64]
+type HistoryList = Sequence[History] | npt.NDArray[np.float64]
 
 
 class MultipleRunResults(TypedDict):
@@ -37,8 +38,14 @@ def best_so_far(history: History) -> list[float]:
 
     Returns:
         Последовательность накопленных минимумов.
+
+    Raises:
+        ValueError: если история не является одномерной.
     """
-    best = np.minimum.accumulate(np.asarray(history, dtype=np.float64))
+    values = np.asarray(history, dtype=np.float64)
+    if values.ndim != 1:
+        raise ValueError("История должна быть одномерной")
+    best = np.minimum.accumulate(values)
     return [float(value) for value in best]
 
 
@@ -55,13 +62,16 @@ def area_under_curve(history: History, normalize: bool = True) -> float:
     Raises:
         ValueError: если история пуста.
     """
-    if not history:
+    values = np.asarray(history, dtype=np.float64)
+    if values.ndim != 1:
+        raise ValueError("История должна быть одномерной")
+    if values.size == 0:
         raise ValueError("История не должна быть пустой")
 
-    best = np.minimum.accumulate(np.asarray(history, dtype=np.float64))
+    best = np.minimum.accumulate(values)
     auc = float(np.trapezoid(best, dx=1.0))
     if normalize:
-        auc /= len(history)
+        auc /= values.size
     return auc
 
 
@@ -74,8 +84,14 @@ def time_to_target(history: History, target: float) -> int | None:
 
     Returns:
         Индекс итерации (с нуля) или ``None``, если цель не достигнута.
+
+    Raises:
+        ValueError: если история не является одномерной.
     """
-    for index, value in enumerate(history):
+    values = np.asarray(history, dtype=np.float64)
+    if values.ndim != 1:
+        raise ValueError("История должна быть одномерной")
+    for index, value in enumerate(values):
         if value <= target + 1e-4:
             return index
     return None
@@ -93,14 +109,18 @@ def mean_best(history_list: HistoryList) -> float:
     Raises:
         ValueError: если список историй пуст или содержит пустую историю.
     """
-    if not history_list:
+    histories = list(history_list)
+    if not histories:
         raise ValueError("Список историй не должен быть пустым")
 
     finals: list[float] = []
-    for history in history_list:
-        if not history:
+    for history in histories:
+        values = np.asarray(history, dtype=np.float64)
+        if values.ndim != 1:
+            raise ValueError("История должна быть одномерной")
+        if values.size == 0:
             raise ValueError("История не должна быть пустой")
-        finals.append(float(min(history)))
+        finals.append(float(np.min(values)))
     return float(np.mean(finals))
 
 
@@ -112,7 +132,9 @@ def run_multiple(
     """Выполняет несколько запусков алгоритма.
 
     Args:
-        runner: обёртка запуска.
+        runner: обёртка запуска. Для пула процессов передавайте её
+            внутри ``with``, чтобы пул не пересоздавался между
+            запусками.
         runs: число запусков, не меньше 1.
         seed: базовый seed. Запуск ``i`` получает ``seed + i``. Если
             параметр не задан, используется seed раннера или алгоритма.

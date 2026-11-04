@@ -1,7 +1,10 @@
 """Тесты построения графиков."""
 
+from collections.abc import Sequence
 from pathlib import Path
+from typing import cast
 
+import numpy as np
 import pytest
 
 from problems.continuous import sphere
@@ -31,6 +34,36 @@ def test_plot_convergence_accepts_many_histories(
     plot_convergence(
         [[1.0, 0.5], [2.0, 1.5]],
         labels=["first", "second"],
+        save_path=path,
+    )
+    assert path.exists()
+
+
+def test_plot_convergence_accepts_numpy_history(tmp_path: Path) -> None:
+    path = tmp_path / "convergence_numpy.png"
+    plot_convergence(
+        np.array([1.0, 0.5, 0.25]),
+        save_path=path,
+    )
+    assert path.exists()
+
+
+def test_plot_convergence_accepts_numpy_matrix(tmp_path: Path) -> None:
+    path = tmp_path / "convergence_matrix.png"
+    plot_convergence(
+        np.array([[1.0, 0.5], [2.0, 1.5]]),
+        labels=["first", "second"],
+        save_path=path,
+    )
+    assert path.exists()
+
+
+def test_plot_convergence_accepts_numpy_integer_list(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "convergence_numpy_int.png"
+    plot_convergence(
+        cast(Sequence[float], [np.int64(1), np.int64(2)]),
         save_path=path,
     )
     assert path.exists()
@@ -82,6 +115,45 @@ def test_plot_execution_time_comparison_rejects_mismatch() -> None:
         plot_execution_time_comparison([1.0], ["first", "second"])
 
 
+@pytest.mark.parametrize(
+    "times",
+    [
+        [1.0, 0.0],
+        [1.0, -1.0],
+        [1.0, float("nan")],
+        [1.0, float("inf")],
+    ],
+)
+def test_plot_execution_time_comparison_rejects_nonpositive(
+    times: list[float],
+) -> None:
+    with pytest.raises(ValueError, match="положительными"):
+        plot_execution_time_comparison(
+            times,
+            ["first", "second"],
+        )
+
+
+def test_plot_execution_time_comparison_rejects_non_numeric() -> None:
+    with pytest.raises(ValueError, match="числами"):
+        plot_execution_time_comparison(
+            cast(Sequence[float], [1.0, "bad"]),
+            ["first", "second"],
+        )
+
+
+def test_plot_execution_time_comparison_accepts_numpy_times(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "times_numpy.png"
+    plot_execution_time_comparison(
+        np.array([1.0, 2.0]),
+        ["first", "second"],
+        save_path=path,
+    )
+    assert path.exists()
+
+
 def test_plot_speedup_saves_file(tmp_path: Path) -> None:
     path = tmp_path / "speedup.png"
     plot_speedup_different_pools(
@@ -92,9 +164,39 @@ def test_plot_speedup_saves_file(tmp_path: Path) -> None:
     assert path.exists()
 
 
-def test_plot_speedup_rejects_zero_base() -> None:
-    with pytest.raises(ValueError, match="Базовое время"):
-        plot_speedup_different_pools([0.0, 1.0], [1, 2])
+def test_plot_speedup_accepts_numpy_times(tmp_path: Path) -> None:
+    path = tmp_path / "speedup_numpy.png"
+    plot_speedup_different_pools(
+        np.array([2.0, 1.0]),
+        [1, 2],
+        save_path=path,
+    )
+    assert path.exists()
+
+
+@pytest.mark.parametrize(
+    "times",
+    [
+        [0.0, 1.0],
+        [1.0, 0.0],
+        [1.0, -1.0],
+        [1.0, float("nan")],
+        [1.0, float("inf")],
+    ],
+)
+def test_plot_speedup_rejects_nonpositive_time(
+    times: list[float],
+) -> None:
+    with pytest.raises(ValueError, match="положительными"):
+        plot_speedup_different_pools(times, [1, 2])
+
+
+def test_plot_speedup_rejects_non_numeric_time() -> None:
+    with pytest.raises(ValueError, match="числами"):
+        plot_speedup_different_pools(
+            cast(Sequence[float], [1.0, "bad"]),
+            [1, 2],
+        )
 
 
 def test_plot_builder_returns_grid() -> None:
