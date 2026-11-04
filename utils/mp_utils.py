@@ -1,20 +1,33 @@
-# algorithms/mp_utils.py
-import os
-from concurrent.futures import ProcessPoolExecutor
-from typing import Callable
+"""Параллельное вычисление целевой функции."""
 
 import numpy as np
+import numpy.typing as npt
+
+from core.evaluator import ProcessPoolEvaluator
+from core.types import Objective
 
 
-def mp_evaluate_fitness(positions: np.ndarray, func: Callable[[np.ndarray], float],
-                        processes: int = None) -> np.ndarray:
+def mp_evaluate_fitness(
+    positions: npt.NDArray[np.float64],
+    func: Objective,
+    processes: int | None = None,
+) -> npt.NDArray[np.float64]:
+    """Вычисляет функцию в пуле процессов.
+
+    Функция создаёт пул на один вызов. Если вычисление выполняется
+    многократно, используйте :class:`core.evaluator.ProcessPoolEvaluator`
+    напрямую, чтобы переиспользовать процессы.
+
+    Args:
+        positions: массив позиций формы ``(n, dim)``.
+        func: целевая функция, определённая на верхнем уровне модуля.
+        processes: число процессов; ``None`` означает число ядер.
+
+    Returns:
+        Массив значений функции формы ``(n,)``.
     """
-    Параллельное вычисление фитнеса
-    Каждая позиция – это np.ndarray, возвращается np.ndarray скалярных значений.
-    """
-    if processes is None:
-        processes = os.cpu_count() // 2
-
-    with ProcessPoolExecutor(max_workers=processes) as executor:
-        results = list(executor.map(func, positions))
-    return np.array(results)
+    with ProcessPoolEvaluator(
+        func,
+        max_workers=processes,
+    ) as evaluator:
+        return evaluator.evaluate(positions)

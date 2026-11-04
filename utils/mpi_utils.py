@@ -1,19 +1,30 @@
+"""MPI-вычисление целевой функции.
+
+Модуль не импортирует ``mpi4py`` на уровне модуля: зависимость
+загружается только при создании :class:`core.evaluator.MPIEvaluator`.
+"""
+
 import numpy as np
-from mpi4py import MPI
+import numpy.typing as npt
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
+from core.evaluator import MPIEvaluator
+from core.types import Objective
+
+__all__ = ["MPIEvaluator", "mpi_evaluate_fitness"]
 
 
-def mpi_evaluate_fitness(positions: np.ndarray, func):
+def mpi_evaluate_fitness(
+    positions: npt.NDArray[np.float64],
+    func: Objective,
+) -> npt.NDArray[np.float64]:
+    """Вычисляет функцию на всех MPI-рангах.
+
+    Args:
+        positions: массив позиций формы ``(n, dim)``.
+        func: целевая функция.
+
+    Returns:
+        Полный массив значений функции на каждом ранге.
     """
-    Parallel fitness evaluation via MPI scatter/gather.
-    """
-    chunks = np.array_split(positions, size) if rank == 0 else None
-    local_chunk = comm.scatter(chunks, root=0)
-    local_fit = np.array([func(x) for x in local_chunk])
-    gathered = comm.gather(local_fit, root=0)
-    if rank == 0:
-        return np.concatenate(gathered)
-    return None
+    evaluator = MPIEvaluator(func)
+    return evaluator.evaluate(positions)
