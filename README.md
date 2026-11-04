@@ -1,106 +1,190 @@
-# Metaheuristics​-Lib
+# Metaheuristics Lib
 
-Учебная Python-библиотека, реализующая классические метаэвристические алгоритмы для задач глобальной оптимизации. Разрабатывалась как модульная основа для исследовательских и прикладных экспериментов, с упором на поддержку параллельных вычислений (multiprocessing и MPI).
+Учебная Python-библиотека метаэвристических алгоритмов глобальной
+оптимизации. Поддерживает последовательный режим, multiprocessing и
+опциональный MPI.
 
----
+## Возможности
 
-## Особенности
+- Пять алгоритмов: ABC, CSA, GWO, WOA и EPO.
+- Единый интерфейс `BaseAlgorithm` и запуск через `Runner`.
+- Последовательный, процессный и MPI-режимы вычисления функции.
+- Метрики сходимости, логирование и визуализация.
+- Тесты, Ruff и strict mypy.
 
-- Набор алгоритмов: Artificial Bee Colony, Crow Search Algorithm, Grey Wolf Optimizer, Whale Optimization Algorithm и Emperor Penguin Optimizer.
-- Поддержка многопроцессной и распределённой (MPI) обработки популяции.
-- Инструменты: логирование, визуализация, сбор метрик (AUC, скорость сходимости, time-to-target и др.).
-- Чёткая модульная архитектура: легко расширять за счёт новых задач или алгоритмов.
+## Структура
 
----
-
-## Структура проекта
-
-```
+```text
 metaheuristics_lib/
-├── metaheuristics_lib/
-│   ├── algorithms/
-│   │   ├── bee_colony/
-│   │   │   ├── artificial_bee_colony.py
-│   │   │   ├── artificial_bee_colony_mp.py
-│   │   │   └── artificial_bee_colony_mpi.py
-│   │   ├── crow_search/
-│   │   │   ├── crow_search_algorithm.py
-│   │   │   ├── crow_search_algorithm_mp.py
-│   │   │   └── crow_search_algorithm_mpi.py
-│   │   ├── emperor_pengiun/
-│   │   │   ├── emperor_penguin_optimizer.py
-│   │   │   ├── emperor_penguin_optimizer_mp.py
-│   │   │   └── emperor_penguin_optimizer_mpi.py
-│   │   ├── grey_wolf/
-│   │   │   ├── grey_wolf_optimizer.py
-│   │   │   ├── grey_wolf_optimizer_mp.py
-│   │   │   └── grey_wolf_optimizer_mpi.py
-│   │   ├── whale/
-│   │   │   ├── whale_optimization_algorithm.py
-│   │   │   ├── whale_optimization_algorithm_mp.py
-│   │   │   └── whale_optimization_algorithm_mpi.py
-│   ├── utils/
-│   │   ├── algorithm_utils.py
-│   │   ├── logger.py
-│   │   ├── metrics.py
-│   │   ├── mp_utils.py
-│   │   ├── mpi_utils.py
-│   │   └── plot.py
-│   ├── core/
-│   │   ├── algorithm.py
-│   │   └── runner.py
-│   └── problems/
-│       └── continuous.py
+├── algorithms/
+│   ├── bee_colony/
+│   ├── crow_search/
+│   ├── emperor_penguin/
+│   ├── grey_wolf/
+│   └── whale/
+├── core/
+├── problems/
+├── utils/
 ├── examples/
-│   ├── test.py
-│   ├── test_mp.py
-└── README.md
+├── tests/
+├── pyproject.toml
+├── README.md
+└── LICENSE
 ```
-
-Пространство имён `metaheuristics_lib/` содержит:
-
-- `core/` — абстрактные классы `BaseAlgorithm`, `Runner`;
-- `algorithms/` — модули с реализациями метаэвристик;
-- `problems/` — тестовые задачи (в том числе benchmark-функции);
-- `utils/` — вспомогательные модули (логирование, метрики, парралелизм, визуализация);
-- `examples/` — демонстрационные скрипты для запуска на CPU и в MPI-среде.
-
----
-
-## Интеграции собственной задачи
-
-Необходимо реализовать функцию, соответствующую следующему шаблону:
-
-```python
-def your_function(x: np.ndarray) -> float:
-    # возвращает значение функции для данного вектора x
-    ...
-```
-
----
-
-## Примеры использования
-
-В директории `examples/` представлены скрипты, демонстрирующие работу алгоритмов ( например, `test.py` ) с демонстрацией:
-
-- выбора алгоритма,
-- запуска с разными параметрами,
-- построения графиков сходимости.
-
----
-
-## Дальнейшее развитие
-
-- Расширение набора встроенных задач и алгоритмов;
-- Поддержка GPU (через CUDA или OpenCL);
-- Разработка веб-интерфейса для удалённого запуска и визуализации;
-- Портирование библиотеки на другие языки (например, C++ с обёрткой под Python).
-  
----
 
 ## Установка
 
 ```bash
 git clone https://github.com/McMorsh/metaheuristics_lib
 cd metaheuristics_lib
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+pip install -e ".[dev,plot]"
 ```
+
+Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install -e ".[dev,plot]"
+```
+
+Для MPI добавьте extra `mpi` и установите OpenMPI или MPICH:
+
+```bash
+pip install -e ".[dev,plot,mpi]"
+```
+
+## Быстрый старт
+
+```python
+from algorithms.whale.whale_optimization_algorithm import (
+    WhaleOptimizationAlgorithm,
+)
+from core.runner import Runner
+from problems.continuous import sphere
+
+algorithm = WhaleOptimizationAlgorithm(
+    problem=sphere,
+    dim=10,
+    bounds=(-10.0, 10.0),
+    agents=20,
+    max_iter=200,
+    seed=42,
+)
+
+with Runner(algorithm, iteration_info=False) as runner:
+    result, history, history_x, elapsed = runner.run()
+
+print(result["minimum_value"])
+print(result["minimum_x"])
+print(len(history))
+```
+
+`result` содержит ключи `minimum_x` и `minimum_value`. История включает
+начальную точку, поэтому её длина равна `max_iter + 1`.
+
+## Границы поиска
+
+Поддерживаются:
+
+- `(low, high)` для всех размерностей;
+- `[(low, high), ...]` длиной `dim`;
+- `numpy.ndarray` формы `(2,)` или `(dim, 2)`.
+
+Неверные формы, `NaN`, бесконечности и `low >= high` приводят к
+`ValueError`.
+
+## Параллельный режим
+
+Параметр `processes` задаёт число процессов:
+
+```python
+from algorithms.whale.whale_optimization_algorithm_mp import (
+    WhaleOptimizationAlgorithmMP,
+)
+
+algorithm = WhaleOptimizationAlgorithmMP(
+    problem=sphere,
+    dim=10,
+    bounds=(-10.0, 10.0),
+    agents=20,
+    max_iter=200,
+    seed=42,
+    processes=4,
+)
+```
+
+Целевая функция должна быть определена на верхнем уровне модуля и быть
+picklable. Значение `processes=1` выполняется последовательно.
+
+## MPI
+
+```python
+from algorithms.whale.whale_optimization_algorithm_mpi import (
+    WhaleOptimizationAlgorithmMPI,
+)
+
+algorithm = WhaleOptimizationAlgorithmMPI(
+    problem=sphere,
+    dim=10,
+    bounds=(-10.0, 10.0),
+    agents=20,
+    max_iter=200,
+    seed=42,
+)
+```
+
+Запуск:
+
+```bash
+mpiexec -n 4 python -m examples.run_mpi --iterations 100 --agents 20
+```
+
+Все ранги выполняют одинаковые обновления, а вычисление функции
+распределяется через MPI. Результат печатает только rank 0. `mpi4py`
+импортируется лениво: без него библиотека работает в последовательном
+и процессном режимах.
+
+## Примеры
+
+```bash
+python -m examples.test --iterations 20 --agents 10 --runs 2
+python -m examples.test_mp --iterations 20 --agents 10 --processes 1 2
+mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
+```
+
+Графики сохраняются в `plots/` или в каталог из `--output-dir`.
+
+## Тесты и проверки
+
+```bash
+ruff check .
+ruff format --check .
+mypy .
+pytest -q
+pytest -q -m integration
+```
+
+Интеграционные тесты запускают реальный пул процессов и могут быть
+недоступны в ограниченных sandbox-окружениях.
+
+## Своя задача
+
+```python
+import numpy as np
+
+
+def my_function(x: np.ndarray) -> float:
+    """Возвращает значение целевой функции."""
+    return float(np.sum(x**2))
+```
+
+Передайте функцию в параметр `problem` любого алгоритма.
+
+## Лицензия
+
+MIT. См. `LICENSE`.
