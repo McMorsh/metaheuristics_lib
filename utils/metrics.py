@@ -1,146 +1,215 @@
-"""
-utils/metrics.py
+"""Метрики сходимости и статистика запусков."""
 
-Модуль для вычисления ключевых метрик качества и поведения метаэвристических алгоритмов.
-Предназначен для анализа сходимости, стабильности и разнообразия решений.
-"""
-from typing import List, Sequence, Optional
+from collections.abc import Sequence
+from typing import TypedDict
 
 import numpy as np
 
+from core.runner import Runner
 
-def best_so_far(history: Sequence[float]) -> List[float]:
+type History = Sequence[float]
+type HistoryList = Sequence[Sequence[float]]
+
+
+class MultipleRunResults(TypedDict):
+    """Результаты нескольких запусков алгоритма.
+
+    Attributes:
+        best_fitness: лучшее значение в каждом запуске.
+        history_of_best_fitness: истории лучшего значения.
+        best_x: лучшие координаты каждого запуска.
+        history_of_best_x: история лучших координат каждого запуска.
+        time: время каждого запуска в секундах.
     """
-    По последовательности значений функции стоимости (fitness) за итерации
-    возвращает траекторию лучшего (минимального) значения на пройденных итерациях.
 
-    :param history: Список fitness значений по итерациям
+    best_fitness: list[float]
+    history_of_best_fitness: list[list[float]]
+    best_x: list[list[float]]
+    history_of_best_x: list[list[list[float]]]
+    time: list[float]
 
-    :return: [min(f1), min(f1,f2), min(f1,f2,f3), ...]
+
+def best_so_far(history: History) -> list[float]:
+    """Возвращает траекторию лучшего значения функции.
+
+    Args:
+        history: значения функции по итерациям.
+
+    Returns:
+        Последовательность накопленных минимумов.
     """
-    best = np.minimum.accumulate(history)
-    return best.tolist()
+    best = np.minimum.accumulate(np.asarray(history, dtype=np.float64))
+    return [float(value) for value in best]
 
 
-def area_under_curve(history: Sequence[float], normalize: bool = True) -> float:
+def area_under_curve(history: History, normalize: bool = True) -> float:
+    """Вычисляет площадь под кривой best-so-far.
+
+    Args:
+        history: значения функции по итерациям.
+        normalize: делить ли площадь на число итераций.
+
+    Returns:
+        Площадь под кривой.
+
+    Raises:
+        ValueError: если история пуста.
     """
-    Вычисляет площадь под кривой best-so-far по итерациям.
-    Чем меньше AUC, тем быстрее алгоритм достиг хорошего решения.
+    if not history:
+        raise ValueError("История не должна быть пустой")
 
-    :param history: Список fitness значений по итерациям
-    :param normalize: если True, нормирует AUC на число итераций
-
-    :return: AUC или нормированный AUC
-    """
-    best = np.minimum.accumulate(history)
-    auc = np.trapezoid(best, dx=1)
+    best = np.minimum.accumulate(np.asarray(history, dtype=np.float64))
+    auc = float(np.trapezoid(best, dx=1.0))
     if normalize:
-        auc = auc / len(history)
-    return float(auc)
+        auc /= len(history)
+    return auc
 
 
-def time_to_target(history: Sequence[float], target: float) -> Optional[int]:
+def time_to_target(history: History, target: float) -> int | None:
+    """Находит первую итерацию с достижением цели.
+
+    Args:
+        history: значения функции по итерациям.
+        target: целевое значение функции.
+
+    Returns:
+        Индекс итерации (с нуля) или ``None``, если цель не достигнута.
     """
-    Определяет номер итерации, на которой впервые было достигнуто
-    значение fitness <= target.
-
-    :param history: Список fitness по итерациям
-    :param target: целевое значение fitness
-
-    :return: индекс итерации (0-based) или None, если не достигнуто
-    """
-    for i, v in enumerate(history):
-        if v <= target + 10e-5:
-            return i
+    for index, value in enumerate(history):
+        if value <= target + 1e-4:
+            return index
     return None
 
 
-def mean_best(history_list: Sequence[Sequence[float]]) -> float:
-    """
-    Среднее из лучших значений (последний элемент best-so-far)
-    по нескольким запускам алгоритма.
+def mean_best(history_list: HistoryList) -> float:
+    """Возвращает среднее финальных лучших значений.
 
-    :param history_list: Список списков history для каждого запуска
+    Args:
+        history_list: истории нескольких запусков.
 
-    :return: среднее финальное best
+    Returns:
+        Среднее значение лучших результатов.
+
+    Raises:
+        ValueError: если список историй пуст или содержит пустую историю.
     """
-    finals = [min(h) for h in history_list]
+    if not history_list:
+        raise ValueError("Список историй не должен быть пустым")
+
+    finals: list[float] = []
+    for history in history_list:
+        if not history:
+            raise ValueError("История не должна быть пустой")
+        finals.append(float(min(history)))
     return float(np.mean(finals))
 
 
-def run_multiple(runner, runs: int = 30, seed=None):
+def run_multiple(
+    runner: Runner,
+    runs: int = 30,
+    seed: int | None = None,
+) -> list[MultipleRunResults]:
+    """Выполняет несколько запусков алгоритма.
+
+    Args:
+        runner: обёртка запуска.
+        runs: число запусков, не меньше 1.
+        seed: базовый seed. Запуск ``i`` получает ``seed + i``. Если
+            параметр не задан, используется seed раннера или алгоритма.
+
+    Returns:
+        Список из одного словаря с массивами результатов. Формат
+        сохранён для совместимости с существующими примерами.
+
+    Raises:
+        ValueError: если ``runs < 1``.
     """
-    Провести несколько запусков алгоритма для статистического анализа.
+    if runs < 1:
+        raise ValueError(
+            f"Параметр runs должен быть положительным, получено {runs}"
+        )
 
-    :param runner: Данные для запуска алгоритма
-    :param runs: число запусков
-    :param seed: seed для инициализации генератора случайных чисел.
+    base_seed = seed
+    if base_seed is None:
+        base_seed = runner.seed
+    if base_seed is None:
+        base_seed = runner.algorithm.seed
 
-    :return: 1
+    best_fitness: list[float] = []
+    history_of_best_fitness: list[list[float]] = []
+    best_x: list[list[float]] = []
+    history_of_best_x: list[list[list[float]]] = []
+    elapsed: list[float] = []
+
+    original_runner_seed = runner.seed
+    original_algorithm_seed = runner.algorithm.seed
+    try:
+        for index in range(runs):
+            if base_seed is not None:
+                runner.seed = base_seed + index
+
+            result, fitness_history, x_history, run_time = runner.run()
+
+            best_fitness.append(result["minimum_value"])
+            history_of_best_fitness.append(fitness_history)
+            best_x.append(result["minimum_x"])
+            history_of_best_x.append(x_history)
+            elapsed.append(run_time)
+    finally:
+        runner.seed = original_runner_seed
+        runner.algorithm.set_seed(original_algorithm_seed)
+
+    return [
+        MultipleRunResults(
+            best_fitness=best_fitness,
+            history_of_best_fitness=history_of_best_fitness,
+            best_x=best_x,
+            history_of_best_x=history_of_best_x,
+            time=elapsed,
+        )
+    ]
+
+
+def summarize_runs(
+    results: Sequence[MultipleRunResults],
+    target: float | None = None,
+) -> dict[str, float | None]:
+    """Собирает статистику по результатам запусков.
+
+    Args:
+        results: результаты :func:`run_multiple`.
+        target: целевое значение для ``time_to_target``.
+
+    Returns:
+        Словарь со средними значениями, стандартными отклонениями и
+        долей успешных запусков.
+
+    Raises:
+        ValueError: если результаты или истории пусты.
     """
-    results = []
-    list_of_best_fitness = []
-    list_of_best_x = []
-    list_of_history = []
-    list_of_time = []
-    list_of_min_x = []
+    if not results:
+        raise ValueError("Список результатов не должен быть пустым")
 
-    for i in range(runs):
-        if seed is not None:
-            runner.seed = seed + i
+    first = results[0]
+    histories = first["history_of_best_fitness"]
+    if not histories:
+        raise ValueError("Истории запусков не должны быть пустыми")
 
-        best, history_of_best_fitness, history_of_best_x, elapsed_time = runner.run()
-
-        list_of_best_fitness.append(best["minimum_value"])
-        list_of_history.append(history_of_best_fitness)
-
-        list_of_best_x.append(best["minimum_x"])
-        list_of_min_x.append(history_of_best_x)
-
-        list_of_time.append(elapsed_time)
-
-    results.append({
-        "best_fitness": list_of_best_fitness,
-        "history_of_best_fitness": list_of_history,
-        "best_x": list_of_best_x,
-        "history_of_best_x": list_of_min_x[0],
-        "time": list_of_time
-    })
-
-    return results
-
-
-def summarize_runs(results: list[dict[str, list[float]]], target: Optional[float] = None) -> dict:
-    """
-    Собирает ключевые статистики по множеству запусков:
-    - mean_final: среднее финальных best
-    - std_final: стандартное отклонение финальных best
-    - mean_auc: средний AUC
-    - std_auc: стандартное отклонение AUC
-    - time_to_target: среднее время до достижения target (если задан)
-    - time: среднее время работы алгоритма
-
-    :param results: результаты запусков алгоритмов (histories, bests,times)
-    :param target: целевое fitness для time_to_target
-
-    :return: словарь со статистиками
-    """
-
-    aucs = [area_under_curve(h, normalize=True) for h in results[0]["history_of_best_fitness"]]
-
-    summary = {
-        'mean_final': float(np.mean(results[0]["best_fitness"])),
-        'std_final': float(np.std(results[0]["best_fitness"])),
-        'mean_auc': float(np.mean(aucs)),
-        'std_auc': float(np.std(aucs)),
-        'time': float(np.mean(results[0]["time"])),
+    aucs = [area_under_curve(history) for history in histories]
+    summary: dict[str, float | None] = {
+        "mean_final": float(np.mean(first["best_fitness"])),
+        "std_final": float(np.std(first["best_fitness"])),
+        "mean_auc": float(np.mean(aucs)),
+        "std_auc": float(np.std(aucs)),
+        "time": float(np.mean(first["time"])),
     }
 
     if target is not None:
-        tts = [time_to_target(h, target) for h in results[0]["history_of_best_fitness"]]
-        # фильтруем None
-        tts_valid = [t for t in tts if t is not None]
-        summary['mean_time_to_target'] = float(np.mean(tts_valid)) if tts_valid else None
-        summary['success_rate'] = len(tts_valid) / len(tts)
+        times = [time_to_target(history, target) for history in histories]
+        valid_times = [value for value in times if value is not None]
+        summary["mean_time_to_target"] = (
+            float(np.mean(valid_times)) if valid_times else None
+        )
+        summary["success_rate"] = len(valid_times) / len(times)
 
     return summary
