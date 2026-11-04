@@ -1,107 +1,162 @@
-from typing import Any
+"""Вспомогательные функции для популяций и границ поиска."""
 
 import numpy as np
+import numpy.typing as npt
+
+from core.types import BoundsLike, Objective, normalize_bounds
+
+Positions = npt.NDArray[np.float64]
+BoundsArray = npt.NDArray[np.float64]
 
 
-def enforce_boundaries_csa(x: np.ndarray, bounds: list[tuple[float, float]], expand_rate: float = 1.2) \
-        -> tuple[np.ndarray, list[tuple[float, float]]]:
+def initialize_bounds(
+    dim: int,
+    bounds: BoundsLike,
+) -> BoundsArray:
+    """Приводит границы к массиву формы ``(dim, 2)``.
+
+    Args:
+        dim: размерность задачи.
+        bounds: общий интервал или интервалы по размерностям.
+
+    Returns:
+        Массив границ формы ``(dim, 2)``.
     """
-    Проверяет выход координат x за границы и корректирует их.
-    Если координата выходит за пределы, соответствующий интервал границ расширяется.
+    return normalize_bounds(bounds, dim)
 
-    :param x: (np.ndarray) — координаты агента.
-    :param bounds: (list[tuple(float, float)]) — границы по каждой координате.
-    :param expand_rate: (float) — коэффициент расширения границ.
 
-    :return:
-        - np.ndarray — координаты x, приведённые к (возможно расширенным) границам.
-        - list[tuple(float, float)] — обновлённые границы по каждой координате.
+def initialize_positions(
+    agents: int,
+    dim: int,
+    bounds: BoundsLike,
+    seed: np.random.Generator | int | None = None,
+) -> Positions:
+    """Создаёт начальные позиции агентов.
+
+    Args:
+        agents: число агентов.
+        dim: размерность задачи.
+        bounds: границы поиска.
+        seed: генератор, целый seed или ``None``.
+
+    Returns:
+        Массив позиций формы ``(agents, dim)``.
+
+    Raises:
+        ValueError: если ``agents`` или ``dim`` неположительны.
     """
-    updated_bounds = []
+    if agents < 1:
+        raise ValueError(
+            f"Параметр agents должен быть положительным, получено {agents}"
+        )
+    if dim < 1:
+        raise ValueError(
+            f"Параметр dim должен быть положительным, получено {dim}"
+        )
 
-    for d in range(len(x)):
-        low, high = bounds[d]
-
-        if x[d] < low:
-            low = x[d] * expand_rate
-        elif x[d] > high:
-            high = x[d] * expand_rate
-
-        updated_bounds.append((low, high))
-
-    # Отдельно собираем списки нижних и верхних границ для clip
-    low_b = np.array([b[0] for b in updated_bounds])
-    high_b = np.array([b[1] for b in updated_bounds])
-
-    x_clipped = np.clip(x, low_b, high_b)
-
-    return x_clipped, updated_bounds
+    rng = (
+        seed
+        if isinstance(seed, np.random.Generator)
+        else np.random.default_rng(seed)
+    )
+    bounds_array = normalize_bounds(bounds, dim)
+    return rng.uniform(
+        low=bounds_array[:, 0],
+        high=bounds_array[:, 1],
+        size=(agents, dim),
+    )
 
 
-def enforce_boundaries(arr, bounds):
+def enforce_boundaries(
+    positions: Positions,
+    bounds: BoundsLike,
+) -> Positions:
+    """Ограничивает позиции границами поиска.
+
+    Args:
+        positions: массив позиций формы ``(n, dim)`` или один вектор.
+        bounds: границы поиска.
+
+    Returns:
+        Массив той же формы с координатами внутри границ.
     """
-    Приводит все координаты в массиве агентов к допустимым границам.
+    array = np.asarray(positions, dtype=np.float64)
+    dim = array.shape[-1]
+    bounds_array = normalize_bounds(bounds, dim)
+    return np.clip(array, bounds_array[:, 0], bounds_array[:, 1])
 
-    :param arr: (np.ndarray) формы (n_agents, dim) — массив позиций агентов.
-    :param bounds: Список кортежей [(low, high)] длиной dim — границы по координатам.
 
-    :return: (np.ndarray) — массив с координатами, ограниченными в пределах границ.
+def enforce_boundaries_csa(
+    position: Positions,
+    bounds: BoundsLike,
+    expand_rate: float = 1.2,
+) -> tuple[Positions, BoundsArray]:
+    """Ограничивает вектор и при необходимости расширяет границы.
+
+    Расширение симметрично и пропорционально ширине интервала. Исходный
+    массив границ не изменяется.
+
+    Args:
+        position: вектор координат.
+        bounds: границы поиска.
+        expand_rate: коэффициент расширения, не меньше 1.
+
+    Returns:
+        Кортеж из ограниченного вектора и новых границ.
+
+    Raises:
+        ValueError: если ``expand_rate < 1`` или формы не совпадают.
     """
-    low_b = np.array([b[0] for b in bounds])
-    high_b = np.array([b[1] for b in bounds])
+    if expand_rate < 1.0:
+        raise ValueError(
+            "Параметр expand_rate должен быть не меньше 1, "
+            f"получено {expand_rate}"
+        )
 
-    return np.clip(arr, low_b, high_b)
+    vector = np.asarray(position, dtype=np.float64)
+    if vector.ndim != 1:
+        raise ValueError(
+            "Позиция должна быть одномерным вектором, "
+            f"получена форма {vector.shape}"
+        )
+
+    bounds_array = normalize_bounds(bounds, vector.size).copy()
+    width = bounds_array[:, 1] - bounds_array[:, 0]
+    margin = width * (expand_rate - 1.0) / 2.0
+
+    below = vector < bounds_array[:, 0]
+    above = vector > bounds_array[:, 1]
+    bounds_array[below, 0] = np.minimum(
+        bounds_array[below, 0],
+        vector[below] - margin[below],
+    )
+    bounds_array[above, 1] = np.maximum(
+        bounds_array[above, 1],
+        vector[above] + margin[above],
+    )
+
+    clipped = np.clip(
+        vector,
+        bounds_array[:, 0],
+        bounds_array[:, 1],
+    )
+    return clipped, bounds_array
 
 
-def initialize_bounds(dim, bounds):
+def evaluate_fitness_serial(
+    positions: Positions,
+    func: Objective,
+) -> npt.NDArray[np.float64]:
+    """Вычисляет целевую функцию для каждой позиции.
+
+    Args:
+        positions: массив позиций формы ``(n, dim)``.
+        func: целевая функция.
+
+    Returns:
+        Массив значений функции формы ``(n,)``.
     """
-    Инициализирует список границ по каждой координате.
-
-    :param dim: int — размерность задачи.
-    :param bounds:
-        - tuple (low, high) — одинаковые границы для всех координат;
-        - или список кортежей [(low, high), ...] длиной dim.
-
-    :return: список кортежей [(low, high), ...] длиной dim.
-    """
-    if isinstance(bounds, tuple):  # один интервал
-        return [bounds] * dim
-    elif isinstance(bounds, list):
-        if len(bounds) != dim:
-            raise ValueError("Неправильное указание границ: длина bounds не совпадает с размерностью")
-        return bounds
-    else:
-        raise TypeError("bounds должен быть кортежем или списком кортежей")
-
-
-def initialize_positions(agents: int, dim: int, bounds, seed=None):
-    """
-    Инициализирует стартовые позиции агентов в заданных границах.
-
-    :param agents: (int) — количество агентов.
-    :param dim: (int) — размерность задачи.
-    :param bounds: (tuple) или список кортежей [(low, high)].
-    :param seed: (int) или None — seed для генератора случайных чисел.
-
-    :return: (np.ndarray) формы (agents, dim) — стартовые позиции агентов.
-    """
-    if seed is not None:
-        np.random.seed(seed)
-
-    bounds = initialize_bounds(dim, bounds)
-    low = np.array([b[0] for b in bounds])
-    high = np.array([b[1] for b in bounds])
-
-    return np.random.uniform(low=low, high=high, size=(agents, dim))
-
-
-def evaluate_fitness_serial(positions: np.ndarray, func: Any) -> np.ndarray:
-    """
-    Вычисляет значение целевой функции для каждого агента (позиции).
-
-    :param positions: (np.ndarray) формы (n_agents, dim) — позиции агентов.
-    :param func: (Callable) — целевая функция, принимающая вектор и возвращающая float.
-
-    :return: (np.ndarray) формы (n_agents, ...) — значения функции для каждого агента.
-    """
-    return np.array([func(pos) for pos in positions])
+    return np.asarray(
+        [func(position) for position in positions],
+        dtype=np.float64,
+    )

@@ -1,212 +1,343 @@
+"""Визуализация целевых функций и сходимости алгоритмов."""
+
+from collections.abc import Sequence
+from pathlib import Path
+from typing import cast
+
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
+
+from core.types import BoundsLike, Objective, normalize_bounds
+
+type SavePath = str | Path | None
 
 
-def plot_builder(fitness_func, bounds, resolution, title):
-    if title is None:
-        title = f'Функция {fitness_func.__name__}'
+def _save_or_show(save_path: SavePath) -> None:
+    """Сохраняет текущий график или показывает его."""
+    if save_path is None:
+        plt.show()
+        return
 
-    bounds = np.array(bounds)
-    x_min, x_max = bounds[0]
+    path = Path(save_path)
+    if path.parent != Path("."):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(path, bbox_inches="tight")
+    plt.close()
 
-    if bounds.shape[0] > 1:
-        y_min, y_max = bounds[1]
-    else:
-        y_min, y_max = bounds[0]
+
+def plot_builder(
+    fitness_func: Objective,
+    bounds: BoundsLike,
+    resolution: int,
+    title: str | None,
+) -> tuple[
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64],
+    str,
+]:
+    """Строит сетку значений функции для двумерного графика.
+
+    Args:
+        fitness_func: целевая функция.
+        bounds: границы поиска.
+        resolution: число точек по каждой оси.
+        title: заголовок или ``None`` для автоматического.
+
+    Returns:
+        Сетки ``X``, ``Y``, значения ``Z`` и заголовок.
+
+    Raises:
+        ValueError: если разрешение неположительно.
+    """
+    if resolution < 1:
+        raise ValueError(
+            "Параметр resolution должен быть положительным, "
+            f"получено {resolution}"
+        )
+
+    bounds_array = normalize_bounds(bounds, 2)
+    x_min, x_max = bounds_array[0]
+    y_min, y_max = bounds_array[1]
 
     x = np.linspace(x_min, x_max, resolution)
     y = np.linspace(y_min, y_max, resolution)
-    X, Y = np.meshgrid(x, y)
-    Z = np.zeros_like(X)
+    grid_x, grid_y = np.meshgrid(x, y)
 
-    for i in range(X.shape[0]):
-        for j in range(X.shape[1]):
-            Z[i, j] = fitness_func(np.array([X[i, j], Y[i, j]]))
+    points = np.column_stack([grid_x.ravel(), grid_y.ravel()])
+    values = np.asarray(
+        [fitness_func(point) for point in points],
+        dtype=np.float64,
+    )
+    grid_z = values.reshape(grid_x.shape)
 
-    return X, Y, Z, title
+    function_name = getattr(
+        fitness_func,
+        "__name__",
+        type(fitness_func).__name__,
+    )
+    resolved_title = title if title is not None else f"Функция {function_name}"
+    return grid_x, grid_y, grid_z, resolved_title
 
 
-# Графики
-def plot_fitness_function_above(fitness_func, bounds, resolution=100, title=None, best_pos=None, save_path=None):
+def plot_fitness_function_above(
+    fitness_func: Objective,
+    bounds: BoundsLike,
+    resolution: int = 100,
+    title: str | None = None,
+    best_pos: Sequence[float] | None = None,
+    save_path: SavePath = None,
+) -> None:
+    """Строит контурный график функции.
+
+    Args:
+        fitness_func: целевая функция.
+        bounds: границы поиска.
+        resolution: число точек по каждой оси.
+        title: заголовок графика.
+        best_pos: координаты лучшего решения.
+        save_path: путь сохранения или ``None`` для показа.
     """
-    Строит контурный график (вид сверху) целевой функции с подписями уровней.
-
-    :param fitness_func: Целевая функция (принимает np.ndarray и возвращает float).
-    :param bounds: Список кортежей [(x_min, x_max), (y_min, y_max)] или одного кортежа для обоих.
-    :param resolution: Разрешение сетки (кол-во точек по оси).
-    :param title: Заголовок графика.
-    :param best_pos: Координаты лучшего решения (опционально).
-    :param save_path: Путь для сохранения графика (опционально).
-    """
-    X, Y, Z, title = plot_builder(fitness_func, bounds, resolution, title)
+    grid_x, grid_y, grid_z, resolved_title = plot_builder(
+        fitness_func,
+        bounds,
+        resolution,
+        title,
+    )
 
     plt.figure(figsize=(8, 6))
-    contour = plt.contourf(X, Y, Z, levels=50, cmap='viridis')
+    contour = plt.contourf(
+        grid_x,
+        grid_y,
+        grid_z,
+        levels=50,
+        cmap="viridis",
+    )
     plt.colorbar(contour)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(title)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title(resolved_title)
 
     if best_pos is not None:
-        best_pos = np.atleast_1d(best_pos)
-        if best_pos.shape[0] == 2:
-            plt.plot(best_pos[0], best_pos[1], 'r.', markersize=10)
+        point = np.atleast_1d(np.asarray(best_pos, dtype=np.float64))
+        if point.size == 2:
+            plt.plot(point[0], point[1], "r.", markersize=10)
 
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-        plt.close()
-    else:
-        plt.show()
+    _save_or_show(save_path)
 
 
-def plot_fitness_function(fitness_func, bounds, resolution=100, title=None, best_pos=None, save_path=None):
+def plot_fitness_function(
+    fitness_func: Objective,
+    bounds: BoundsLike,
+    resolution: int = 100,
+    title: str | None = None,
+    best_pos: Sequence[float] | None = None,
+    save_path: SavePath = None,
+) -> None:
+    """Строит трёхмерный график функции.
+
+    Args:
+        fitness_func: целевая функция.
+        bounds: границы поиска.
+        resolution: число точек по каждой оси.
+        title: заголовок графика.
+        best_pos: координаты лучшего решения.
+        save_path: путь сохранения или ``None`` для показа.
     """
-    Строит 3D-график функции приспособленности для функций.
+    grid_x, grid_y, grid_z, resolved_title = plot_builder(
+        fitness_func,
+        bounds,
+        resolution,
+        title,
+    )
 
-    :param: fitness_func (callable): Целевая функция, которую необходимо минимизировать.
-    :param: bounds (list of tuples): Список кортежей (low, high) с границами для каждой размерности.
-    :param: resolution (int): Количество точек по каждой оси.
-    :param: title (str): Заголовок графика.
-    :param: save_path (str, optional): Путь для сохранения графика. Если None, график отображается на экране.
-    """
-    X, Y, Z, title = plot_builder(fitness_func, bounds, resolution, title)
-
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111, projection='3d')
-    surf = ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Fitness Value')
-    ax.set_title(title)
-    fig.colorbar(surf, shrink=0.5, aspect=5)
+    figure = plt.figure(figsize=(10, 7))
+    axes = figure.add_subplot(111, projection="3d")
+    surface = axes.plot_surface(
+        grid_x,
+        grid_y,
+        grid_z,
+        cmap="viridis",
+        edgecolor="none",
+    )
+    axes.set_xlabel("X")
+    axes.set_ylabel("Y")
+    axes.set_zlabel("Fitness Value")
+    axes.set_title(resolved_title)
+    figure.colorbar(surface, shrink=0.5, aspect=5)
 
     if best_pos is not None:
-        best_pos = np.atleast_1d(best_pos)
-        if best_pos.shape[0] == 2:
-            z_val = fitness_func(best_pos)
-            ax.scatter(best_pos[0], best_pos[1], z_val,
-                       color='r', s=100, label='Best Solution', marker='x')
-            ax.legend()
+        point = np.atleast_1d(np.asarray(best_pos, dtype=np.float64))
+        if point.size == 2:
+            z_value = fitness_func(point)
+            axes.scatter(
+                point[0],
+                point[1],
+                z_value,
+                color="r",
+                s=100,
+                label="Best Solution",
+                marker="x",
+            )
+            axes.legend()
 
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-        plt.close()
+    _save_or_show(save_path)
+
+
+def plot_convergence(
+    histories: Sequence[float] | Sequence[Sequence[float]],
+    labels: str | Sequence[str] | None = None,
+    title: str = "График сравнения сходимости",
+    save_path: SavePath = None,
+) -> None:
+    """Строит графики сходимости одного или нескольких алгоритмов.
+
+    Args:
+        histories: одна история или последовательность историй.
+        labels: подпись или подписи алгоритмов.
+        title: заголовок графика.
+        save_path: путь сохранения или ``None`` для показа.
+
+    Raises:
+        ValueError: если список историй пуст.
+    """
+    if not histories:
+        raise ValueError("Список историй не должен быть пустым")
+
+    first = histories[0]
+    if isinstance(first, (int, float, np.floating)):
+        history_list = [list(cast(Sequence[float], histories))]
     else:
-        plt.show()
+        history_list = [
+            list(history)
+            for history in cast(Sequence[Sequence[float]], histories)
+        ]
 
+    if isinstance(labels, str):
+        label_list = [labels]
+    elif labels is None:
+        label_list = ["Лучшее значение"] * len(history_list)
+    else:
+        label_list = list(labels)
+    while len(label_list) < len(history_list):
+        label_list.append(f"Алгоритм {len(label_list) + 1}")
 
-# Графики сходимости
-def plot_convergence(histories, labels=None, title='График сравнения сходимости', save_path=None):
-    """
-    Строит графики сходимости для нескольких алгоритмов.
-
-    :param: histories (list of list of float): Списки значений функции приспособленности на каждой итерации для разных алгоритмов.
-    :param: labels (list of str): Названия алгоритмов.
-    :param: title (str): Заголовок графика.
-    :param: save_path (str, optional): Путь для сохранения графика. Если None, график отображается на экране.
-    """
-    if labels is None:
-        labels = ['Лучшее значение']
-    if isinstance(histories[0], (float, int)):
-        histories = [histories]
-        labels = [labels] if isinstance(labels, str) else labels
-        title = 'График сходимости'
-
-    for history, label in zip(histories, labels):
+    plt.figure(figsize=(10, 6))
+    for history, label in zip(
+        history_list,
+        label_list,
+        strict=False,
+    ):
         plt.plot(history, label=label)
 
     plt.title(title)
-    plt.xlabel('Итерация')
-    plt.ylabel('Значение целевой функции')
+    plt.xlabel("Итерация")
+    plt.ylabel("Значение целевой функции")
     plt.legend()
     plt.grid(True)
-
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-        plt.close()
-    else:
-        plt.show()
+    _save_or_show(save_path)
 
 
-# График сравнения скорости для разных алгоритмов
-def plot_execution_time_comparison(times, labels, title=f"Сравнение времени выполнения алгоритмов", save_path=None):
-    """
-    Строит столбчатую диаграмму времени выполнения алгоритмов по функциям.
+def plot_execution_time_comparison(
+    times: Sequence[float],
+    labels: Sequence[str],
+    title: str = "Сравнение времени выполнения алгоритмов",
+    save_path: SavePath = None,
+) -> None:
+    """Строит столбчатую диаграмму времени выполнения.
 
-    :param times: List[float] — список времен выполнения для каждого алгоритма
-    :param labels: list[str] — список названий алгоритмов
-    :param title: (str): Заголовок графика.
-    :param save_path: Путь для сохранения графика. Если None — просто показать.
+    Args:
+        times: время выполнения каждого алгоритма.
+        labels: названия алгоритмов.
+        title: заголовок графика.
+        save_path: путь сохранения или ``None`` для показа.
+
+    Raises:
+        ValueError: если длины списков не совпадают или они пусты.
     """
     if len(times) != len(labels):
-        raise ValueError("Количество времен и количество названий алгоритмов должно совпадать")
+        raise ValueError(
+            "Количество времён и названий алгоритмов должно совпадать"
+        )
+    if not times:
+        raise ValueError("Список времён не должен быть пустым")
 
-    plt.figure(figsize=(12, 6))
-
+    figure = plt.figure(figsize=(12, 6))
     colors = plt.cm.tab10(np.linspace(0, 1, len(labels)))
-
     bars = plt.bar(labels, times, color=colors)
     plt.ylabel("Время (сек)", fontsize=18)
     plt.title(title, fontsize=18, pad=20)
-
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
 
-    max_time = max(times) if times else 1
+    max_time = max(times)
     plt.ylim(top=max_time * 1.20)
-
     for bar in bars:
         height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2.,
-                 height + max(times) * 0.02,
-                 f'{height:.3f}',
-                 ha='center',
-                 va='bottom',
-                 fontsize=18)
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height + max_time * 0.02,
+            f"{height:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=18,
+        )
 
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.tight_layout()
-
-    plt.subplots_adjust(bottom=0.15)
-
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-        plt.close()
-    else:
-        plt.show()
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
+    figure.tight_layout()
+    figure.subplots_adjust(bottom=0.15)
+    _save_or_show(save_path)
 
 
-# График сравнения времени выполнения алгоритма с разными количеством потоков
-def plot_speedup_different_pools(times, threads, title=f"Функций ускорения", save_path=None):
-    """
-    Строит график ускорения на основе времени выполнения при различном количестве потоков.
+def plot_speedup_different_pools(
+    times: Sequence[float],
+    threads: Sequence[int],
+    title: str = "График ускорения",
+    save_path: SavePath = None,
+) -> None:
+    """Строит график ускорения относительно первого запуска.
 
-    :param times: (list or np.ndarray) Время выполнения для каждого количества потоков.
-    :param threads: (list, optional) Метки для оси X (например, количество потоков).
-    :param title: (str) Заголовок графика.
-    :param save_path: (str, optional) Путь для сохранения графика. Если None, график отображается на экране.
+    Args:
+        times: время выполнения для каждого числа процессов.
+        threads: число процессов.
+        title: заголовок графика.
+        save_path: путь сохранения или ``None`` для показа.
+
+    Raises:
+        ValueError: если длины списков не совпадают, списки пусты или
+            базовое время неположительно.
     """
     if len(times) != len(threads):
-        raise ValueError("Количество времен и количество потоков должно совпадать")
+        raise ValueError(
+            "Количество времён и чисел процессов должно совпадать"
+        )
+    if not times:
+        raise ValueError("Список времён не должен быть пустым")
+    if times[0] <= 0:
+        raise ValueError(
+            f"Базовое время должно быть положительным, получено {times[0]}"
+        )
+
+    speedup = times[0] / np.asarray(times, dtype=np.float64)
+    positions = np.arange(len(threads))
 
     plt.figure(figsize=(12, 6))
-
-    x = np.arange(len(threads))
-
-    bars = plt.bar(x, times, color='skyblue')
-    plt.xticks(x, threads)
-    plt.ylabel("Время (сек)")
-    plt.xlabel("Количество Процессов")
+    bars = plt.bar(positions, speedup, color="skyblue")
+    plt.xticks(positions, [str(value) for value in threads])
+    plt.ylabel("Ускорение")
+    plt.xlabel("Количество процессов")
     plt.title(title)
 
     for bar in bars:
         height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2.0, height, f'{height:.3f}', ha='center', va='bottom')
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{height:.3f}",
+            ha="center",
+            va="bottom",
+        )
 
     plt.tight_layout()
-
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-        plt.close()
-    else:
-        plt.show()
+    _save_or_show(save_path)
