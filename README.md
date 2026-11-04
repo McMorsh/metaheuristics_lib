@@ -129,6 +129,31 @@ algorithm = WhaleOptimizationAlgorithmMP(
 Целевая функция должна быть определена на верхнем уровне модуля и быть
 picklable. Значение `processes=1` выполняется последовательно.
 
+При необходимости можно явно выбрать контекст multiprocessing:
+
+```python
+import multiprocessing
+import sys
+
+start_method = (
+    "fork"
+    if sys.platform.startswith("linux")
+    and "fork" in multiprocessing.get_all_start_methods()
+    else "spawn"
+)
+
+algorithm = WhaleOptimizationAlgorithmMP(
+    problem=sphere,
+    dim=10,
+    bounds=(-10.0, 10.0),
+    processes=2,
+    mp_context=multiprocessing.get_context(start_method),
+)
+```
+
+Это полезно в окружениях, где стандартный forkserver запрещен.
+На macOS и Windows пример использует `spawn`.
+
 ## MPI
 
 ```python
