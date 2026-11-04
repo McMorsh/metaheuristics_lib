@@ -478,13 +478,13 @@ pytest -q -m integration
 Запуск примеров:
 
 ```bash
-python -m examples.test --iterations 20 --agents 10 --runs 2
-python -m examples.test_mp --iterations 20 --agents 10 --processes 1 2
+python -m examples.run_serial --iterations 20 --agents 10 --runs 2
+python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 ```
 
 `python -m` добавляет корень проекта в `sys.path`, поэтому импорты
-`from core...` работают без `PYTHONPATH`. `examples/test_mp.py` использует
+`from core...` работают без `PYTHONPATH`. `examples/run_mp.py` использует
 `multiprocessing`, а `examples/run_mpi.py` - MPI. Графики сохраняются в
 `plots/` или в каталог из `--output-dir`.
 

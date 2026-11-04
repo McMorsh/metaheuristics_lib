@@ -3,8 +3,8 @@
 import importlib
 from pathlib import Path
 
-from examples import test as serial_example
-from examples import test_mp as parallel_example
+from examples import run_mp as parallel_example
+from examples import run_serial as serial_example
 
 
 def test_serial_example_writes_plots(tmp_path: Path) -> None:

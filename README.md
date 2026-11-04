@@ -87,6 +87,10 @@ print(len(history))
 `result` содержит ключи `minimum_x` и `minimum_value`. История включает
 начальную точку, поэтому её длина равна `max_iter + 1`.
 
+Библиотека не настраивает logging при импорте. Чтобы видеть сообщения
+`Runner`, настройте logging в приложении, например
+`logging.basicConfig(level=logging.INFO)`.
+
 ## Границы поиска
 
 Поддерживаются:
@@ -152,8 +156,8 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 100 --agents 20
 ## Примеры
 
 ```bash
-python -m examples.test --iterations 20 --agents 10 --runs 2
-python -m examples.test_mp --iterations 20 --agents 10 --processes 1 2
+python -m examples.run_serial --iterations 20 --agents 10 --runs 2
+python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 ```
 
