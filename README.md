@@ -23,6 +23,7 @@ metaheuristics_lib/
 │   ├── grey_wolf/
 │   └── whale/
 ├── core/
+├── metaheuristics_lib/   # публичный фасад
 ├── problems/
 ├── utils/
 ├── examples/
@@ -58,17 +59,20 @@ pip install -e ".[dev,plot]"
 pip install -e ".[dev,plot,mpi]"
 ```
 
+## Публичный API
+
+Пакет `metaheuristics_lib` реэкспортирует алгоритмы, `Runner`,
+`Evaluator`, границы и тестовые функции. Плоские импорты
+`from core...`, `from algorithms...` и `from problems...` остаются
+доступными для совместимости. Пример использования приведен ниже.
+
 ## Быстрый старт
 
 ```python
-from algorithms.whale.whale_optimization_algorithm import (
-    WhaleOptimizationAlgorithm,
-)
-from core.runner import Runner
-from problems.continuous import sphere
+import metaheuristics_lib as mhl
 
-algorithm = WhaleOptimizationAlgorithm(
-    problem=sphere,
+algorithm = mhl.WhaleOptimizationAlgorithm(
+    problem=mhl.sphere,
     dim=10,
     bounds=(-10.0, 10.0),
     agents=20,
@@ -76,7 +80,7 @@ algorithm = WhaleOptimizationAlgorithm(
     seed=42,
 )
 
-with Runner(algorithm, iteration_info=False) as runner:
+with mhl.Runner(algorithm, iteration_info=False) as runner:
     result, history, history_x, elapsed = runner.run()
 
 print(result["minimum_value"])

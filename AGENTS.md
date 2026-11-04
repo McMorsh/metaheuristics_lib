@@ -77,10 +77,11 @@
 - Группы разделяйте одной пустой строкой, внутри группы сортируйте по алфавиту.
 - Один модуль на строку: `import os, sys` запрещён. Несколько имён в
   `from module import a, b` допустимы.
-- Используйте абсолютные импорты. Не смешивайте в проекте схемы `core...` и
-  `metaheuristics_lib.core...`. Текущая раскладка плоская: пишите
-  `from core...`, `from utils...`. Вариант `from metaheuristics_lib...`
-  появится только после выделения пакета.
+- Используйте абсолютные импорты. Внутри проекта действует плоская
+  раскладка: пишите `from core...`, `from utils...`, `from algorithms...`.
+  Публичный фасад `metaheuristics_lib` реэкспортирует стабильный API для
+  пользователей, но внутренние модули не должны импортировать сами себя
+  через `metaheuristics_lib.*`.
 - Запрещены `from module import *`.
 - Не оставляйте неиспользуемые импорты.
 - Тяжёлые опциональные зависимости (`mpi4py`, `matplotlib`) импортируйте в
@@ -393,8 +394,13 @@ plot = ["matplotlib>=3.8"]
 mpi = ["mpi4py>=4"]
 
 [tool.setuptools.packages.find]
-include = ["core*", "utils*", "problems*", "algorithms*"]
-namespaces = true
+include = [
+    "core*",
+    "utils*",
+    "problems*",
+    "algorithms*",
+    "metaheuristics_lib*",
+]
 
 [tool.ruff]
 line-length = 79
@@ -434,9 +440,10 @@ per-file ignores для legacy-кода.
 Включайте его в `[tool.mypy]`, а legacy-модули исключайте через baseline или
 `ignore_errors`.
 
-Пример соответствует текущей плоской раскладке: `core` и `utils` - обычные
-пакеты, `algorithms` и `problems` подключаются как namespace-пакеты. При
-выделении отдельного пакета `metaheuristics_lib/` обновите `include` и импорты.
+Пример соответствует текущей плоской раскладке: `core`, `utils`,
+`algorithms` и `problems` - обычные пакеты. Публичный фасад
+`metaheuristics_lib` включен в `include`; при переходе на `src`-layout
+обновите `include` и импорты.
 
 ## Сборка и проверка
 
@@ -520,16 +527,19 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 ## Миграция текущего кода
 
 Основная миграция выполнена: добавлены `pyproject.toml`, `__init__.py`,
-`py.typed`, тесты, Ruff и strict mypy; serial и multiprocessing режимы
-проверены. Варианты `_mp` и `_mpi` сведены к обёрткам над общим алгоритмом
-и `Evaluator`; глобальный `np.random.seed`, широкий `except Exception` и
-жёсткие пути в примерах удалены.
+`py.typed`, публичный фасад `metaheuristics_lib`, тесты, Ruff и strict
+mypy; serial и multiprocessing режимы проверены. Варианты `_mp` и `_mpi`
+сведены к обёрткам над общим алгоритмом и `Evaluator`; глобальный
+`np.random.seed` и жёсткие пути в примерах удалены. Широкий
+`except Exception` остался только в `MPIEvaluator`, чтобы разослать
+ошибку всем рангам и не допустить зависания.
 
 Осталось:
 
 1. Прогнать MPI-пример и интеграционный тест на машине с `mpi4py` и MPI.
 2. Добавить CI для Python 3.12+.
-3. Расширять покрытие тестами по мере роста функциональности.
+3. Добавить автоматический packaging-smoke-тест с установкой wheel.
+4. Расширять покрытие тестами по мере роста функциональности.
 
 Правила приоритетнее стиля соседнего legacy-кода: новый код пишите по правилам,
 даже если рядом остаются старые отступления. Массовый реформат и изменение
