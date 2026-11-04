@@ -1,5 +1,8 @@
 """Тесты Runner и воспроизводимости."""
 
+import logging
+from typing import cast
+
 import numpy as np
 import numpy.typing as npt
 import pytest
@@ -25,6 +28,104 @@ class BrokenAlgorithm(BaseAlgorithm):
 
     def get_result(self) -> OptimizationResult:
         raise RuntimeError("boom")
+
+
+class StubAlgorithm(BaseAlgorithm):
+    """Алгоритм без реальных итераций для проверки Runner."""
+
+    def initialize(self) -> None:
+        self.best_solution = np.zeros(self.dim)
+        self.best_fitness = 0.0
+
+    def iterate(self) -> None:
+        """Ничего не делает."""
+
+
+class NoneResultAlgorithm(StubAlgorithm):
+    """Алгоритм, возвращающий None вместо результата."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(OptimizationResult, None)
+
+
+class MissingKeyAlgorithm(StubAlgorithm):
+    """Алгоритм с неполным результатом."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(OptimizationResult, {"minimum_x": [0.0, 0.0]})
+
+
+class WrongValueAlgorithm(StubAlgorithm):
+    """Алгоритм с неверным типом значения."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(
+            OptimizationResult,
+            {"minimum_x": [0.0, 0.0], "minimum_value": "bad"},
+        )
+
+
+class StringCoordinatesAlgorithm(StubAlgorithm):
+    """Алгоритм с нечисловыми координатами."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(
+            OptimizationResult,
+            {"minimum_x": ["1.0", "2.0"], "minimum_value": 0.0},
+        )
+
+
+class NonIterableCoordinatesAlgorithm(StubAlgorithm):
+    """Алгоритм с неитерируемыми координатами."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(
+            OptimizationResult,
+            {"minimum_x": 1.0, "minimum_value": 0.0},
+        )
+
+
+class MappingCoordinatesAlgorithm(StubAlgorithm):
+    """Алгоритм с координатами в виде отображения."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(
+            OptimizationResult,
+            {
+                "minimum_x": {1.0: "a", 2.0: "b"},
+                "minimum_value": 0.0,
+            },
+        )
+
+
+class SetCoordinatesAlgorithm(StubAlgorithm):
+    """Алгоритм с координатами в неупорядоченном множестве."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(
+            OptimizationResult,
+            {"minimum_x": {1.0, 2.0}, "minimum_value": 0.0},
+        )
+
+
+class StringContainerCoordinatesAlgorithm(StubAlgorithm):
+    """Алгоритм со строкой вместо последовательности координат."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(
+            OptimizationResult,
+            {"minimum_x": "12", "minimum_value": 0.0},
+        )
+
+
+class ShortCoordinatesAlgorithm(StubAlgorithm):
+    """Алгоритм с координатами неверной длины."""
+
+    def get_result(self) -> OptimizationResult:
+        return cast(
+            OptimizationResult,
+            {"minimum_x": [0.0], "minimum_value": 0.0},
+        )
 
 
 class CloseTrackingEvaluator:
@@ -122,6 +223,123 @@ def test_runner_returns_result_and_histories() -> None:
     assert elapsed > 0.0
 
 
+def test_runner_rejects_none_result() -> None:
+    algorithm = NoneResultAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(TypeError, match="словарь"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_missing_result_key() -> None:
+    algorithm = MissingKeyAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(KeyError, match="minimum_value"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_wrong_result_type() -> None:
+    algorithm = WrongValueAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(TypeError, match="minimum_value"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_non_numeric_coordinates() -> None:
+    algorithm = StringCoordinatesAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(TypeError, match="только числа"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_non_iterable_coordinates() -> None:
+    algorithm = NonIterableCoordinatesAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(TypeError, match="последовательностью"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_mapping_coordinates() -> None:
+    algorithm = MappingCoordinatesAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(TypeError, match="последовательностью"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_set_coordinates() -> None:
+    algorithm = SetCoordinatesAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(TypeError, match="последовательностью"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_string_container_coordinates() -> None:
+    algorithm = StringContainerCoordinatesAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(TypeError, match="последовательностью"):
+        Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_rejects_wrong_coordinate_count() -> None:
+    algorithm = ShortCoordinatesAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+    )
+    with pytest.raises(ValueError, match="2 координат"):
+        Runner(algorithm, iteration_info=False).run()
+
+
 def test_runner_propagates_get_result_error() -> None:
     algorithm = BrokenAlgorithm(
         sphere,
@@ -149,6 +367,45 @@ def test_runner_closes_algorithm() -> None:
     with Runner(algorithm, iteration_info=False) as runner:
         runner.run()
     assert evaluator.closed
+
+
+def test_runner_closes_algorithm_without_context() -> None:
+    evaluator = CloseTrackingEvaluator()
+    algorithm = WhaleOptimizationAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=8,
+        max_iter=2,
+        seed=42,
+        evaluator=evaluator,
+    )
+    Runner(algorithm, iteration_info=False).run()
+    assert evaluator.closed
+
+
+def test_runner_closes_algorithm_on_error() -> None:
+    evaluator = CloseTrackingEvaluator()
+    algorithm = BrokenAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=2,
+        max_iter=1,
+        seed=42,
+        evaluator=evaluator,
+    )
+    with pytest.raises(RuntimeError, match="boom"):
+        Runner(algorithm, iteration_info=False).run()
+    assert evaluator.closed
+
+
+def test_runner_import_does_not_configure_logging() -> None:
+    import core.runner as runner_module
+
+    runner_logger = logging.getLogger(runner_module.__name__)
+    assert runner_logger.handlers == []
+    assert runner_logger.propagate is True
 
 
 def test_invalid_max_iter_is_rejected() -> None:
