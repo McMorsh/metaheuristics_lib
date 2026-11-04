@@ -5,11 +5,17 @@ from pathlib import Path
 
 import pytest
 
-from utils.logger import get_logger
+from utils.logger import (
+    CONSOLE_HANDLER_NAME,
+    FILE_HANDLER_NAME,
+    get_logger,
+)
 
 
 def _clear_handlers(name: str) -> None:
     logger = logging.getLogger(name)
+    for handler in logger.handlers:
+        handler.close()
     logger.handlers.clear()
 
 
@@ -21,6 +27,56 @@ def test_get_logger_is_idempotent() -> None:
         second = get_logger(name)
         assert second is logger
         assert len(logger.handlers) == handler_count
+    finally:
+        _clear_handlers(name)
+
+
+def test_repeated_get_logger_updates_handler_level() -> None:
+    name = "test_update_handler_level"
+    try:
+        logger = get_logger(name, level=logging.INFO)
+        console = next(
+            handler
+            for handler in logger.handlers
+            if handler.name == CONSOLE_HANDLER_NAME
+        )
+        assert console.level == logging.INFO
+
+        get_logger(name, level=logging.DEBUG)
+
+        assert logger.level == logging.DEBUG
+        assert console.level == logging.DEBUG
+    finally:
+        _clear_handlers(name)
+
+
+def test_repeated_get_logger_updates_file_handler_level(
+    tmp_path: Path,
+) -> None:
+    name = "test_update_file_handler_level"
+    path = tmp_path / "app.log"
+    try:
+        logger = get_logger(
+            name,
+            level=logging.INFO,
+            log_to_file=True,
+            filename=path,
+        )
+        file_handler = next(
+            handler
+            for handler in logger.handlers
+            if handler.name == FILE_HANDLER_NAME
+        )
+        assert file_handler.level == logging.INFO
+
+        get_logger(
+            name,
+            level=logging.DEBUG,
+            log_to_file=True,
+            filename=path,
+        )
+
+        assert file_handler.level == logging.DEBUG
     finally:
         _clear_handlers(name)
 

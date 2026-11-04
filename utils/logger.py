@@ -21,6 +21,14 @@ def _resolve_level(level: int | str) -> int:
     return resolved
 
 
+def _update_handler_levels(logger: Logger, level: int) -> None:
+    """Обновляет уровень обработчиков, созданных этой библиотекой."""
+    managed_names = {CONSOLE_HANDLER_NAME, FILE_HANDLER_NAME}
+    for handler in logger.handlers:
+        if handler.name in managed_names:
+            handler.setLevel(level)
+
+
 def get_logger(
     name: str = __name__,
     level: int | str = logging.INFO,
@@ -31,7 +39,8 @@ def get_logger(
 ) -> Logger:
     """Возвращает настроенный логгер.
 
-    Повторный вызов с тем же именем не добавляет обработчики повторно.
+    Повторный вызов с тем же именем не добавляет обработчики повторно,
+    но обновляет их уровень.
 
     Args:
         name: имя логгера, обычно ``__name__`` модуля.
@@ -63,6 +72,7 @@ def get_logger(
     logger = logging.getLogger(name)
     logger.setLevel(resolved_level)
     logger.propagate = False
+    _update_handler_levels(logger, resolved_level)
 
     formatter = logging.Formatter(
         fmt=DEFAULT_FORMAT,
