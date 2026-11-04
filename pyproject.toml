@@ -24,7 +24,13 @@ plot = ["matplotlib>=3.9"]
 mpi = ["mpi4py>=4"]
 
 [tool.setuptools.packages.find]
-include = ["core*", "utils*", "problems*", "algorithms*"]
+include = [
+    "core*",
+    "utils*",
+    "problems*",
+    "algorithms*",
+    "metaheuristics_lib*",
+]
 
 [tool.setuptools.package-data]
 "*" = ["py.typed"]
@@ -43,7 +49,12 @@ known-first-party = ["core", "utils", "problems", "algorithms"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-exclude = ["^\\.venv/"]
+exclude = [
+    "^\\.venv/",
+    "^build/",
+    "^dist/",
+    ".*\\.egg-info/",
+]
 
 [[tool.mypy.overrides]]
 module = ["matplotlib.*", "mpi4py.*"]
