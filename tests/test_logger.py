@@ -121,3 +121,27 @@ def test_integer_level_is_accepted() -> None:
         assert logger.level == logging.DEBUG
     finally:
         _clear_handlers(name)
+
+
+def test_string_level_is_accepted() -> None:
+    name = "test_string_level"
+    try:
+        logger = get_logger(name, level="debug")
+        assert logger.level == logging.DEBUG
+        console = next(
+            handler
+            for handler in logger.handlers
+            if handler.name == CONSOLE_HANDLER_NAME
+        )
+        assert console.level == logging.DEBUG
+    finally:
+        _clear_handlers(name)
+
+
+def test_get_logger_disables_propagation() -> None:
+    name = "test_propagation"
+    try:
+        logger = get_logger(name)
+        assert logger.propagate is False
+    finally:
+        _clear_handlers(name)
