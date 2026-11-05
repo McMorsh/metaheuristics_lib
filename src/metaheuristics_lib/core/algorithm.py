@@ -133,10 +133,37 @@ class BaseAlgorithm(ABC):
 
         Returns:
             Значения целевой функции формы ``(n,)``.
+
+        Raises:
+            ValueError: если fitness содержит ``NaN`` или бесконечность.
         """
         values = self.evaluator.evaluate(positions)
         self.nfev += int(positions.shape[0])
+        self._validate_fitness(values)
         return values
+
+    @staticmethod
+    def _validate_fitness(
+        fitness: npt.NDArray[np.float64],
+    ) -> None:
+        """Проверяет, что все значения fitness конечны.
+
+        Args:
+            fitness: значения целевой функции.
+
+        Raises:
+            ValueError: если среди значений есть ``NaN`` или
+                бесконечность.
+        """
+        invalid = ~np.isfinite(fitness)
+        if not np.any(invalid):
+            return
+
+        index = int(np.flatnonzero(invalid)[0])
+        raise ValueError(
+            "Значения fitness должны быть конечными, "
+            f"получено {fitness[index]} для позиции {index}"
+        )
 
     def _initial_positions(self) -> npt.NDArray[np.float64]:
         """Генерирует начальную популяцию внутри границ."""
@@ -167,7 +194,8 @@ class BaseAlgorithm(ABC):
             fitness: значения функции для этих позиций.
 
         Raises:
-            ValueError: если число позиций и значений не совпадает.
+            ValueError: если число позиций и значений не совпадает
+                или fitness содержит ``NaN`` или бесконечность.
         """
         if positions.ndim != 2:
             raise ValueError(
@@ -179,6 +207,7 @@ class BaseAlgorithm(ABC):
                 "Число позиций и значений fitness должно совпадать, "
                 f"получено {positions.shape[0]} и {fitness.shape[0]}"
             )
+        self._validate_fitness(fitness)
 
         index = int(np.argmin(fitness))
         value = float(fitness[index])
