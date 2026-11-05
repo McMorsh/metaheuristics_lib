@@ -118,7 +118,8 @@ class Runner:
 
         Returns:
             Кортеж из результата, истории лучшего значения функции,
-            истории лучших координат и затраченного времени.
+            истории лучших координат и затраченного времени. Причина
+            ранней остановки доступна в ``algorithm.stop_reason``.
 
         Raises:
             TypeError: если результат имеет неверный тип.
@@ -141,8 +142,8 @@ class Runner:
     ]:
         """Выполняет один запуск алгоритма.
 
-        История содержит начальную точку, поэтому её длина равна
-        ``max_iter + 1``.
+        История содержит начальную точку. Без ранней остановки её
+        длина равна ``max_iter + 1``, при остановке она короче.
         """
         seed = self.seed if self.seed is not None else self.algorithm.seed
         if seed is not None:
@@ -162,6 +163,7 @@ class Runner:
 
         total_start = time.perf_counter()
         self.algorithm.initialize()
+        self.algorithm.check_stop()
 
         result = _validate_result(
             self.algorithm.get_result(),
@@ -171,6 +173,9 @@ class Runner:
         history_of_best_x = [list(result["minimum_x"])]
 
         for iteration in range(max_iter):
+            if self.algorithm.stop_reason is not None:
+                break
+
             iteration_start = time.perf_counter()
             self.algorithm.iterate()
             iteration_elapsed = time.perf_counter() - iteration_start
@@ -190,13 +195,16 @@ class Runner:
                     f"x = {result['minimum_x']}"
                 )
 
+            self.algorithm.check_stop()
+
         total_elapsed = time.perf_counter() - total_start
         if self.algorithm.is_root:
             logger.info(
                 f"Algorithm end: the best f = "
                 f"{result['minimum_value']:.4e}; "
                 f"x = {result['minimum_x']}, "
-                f"time = {total_elapsed:.4f} c"
+                f"time = {total_elapsed:.4f} c, "
+                f"stop = {self.algorithm.stop_reason or 'max_iter'}"
             )
 
         return (

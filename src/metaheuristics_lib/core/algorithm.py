@@ -1,6 +1,7 @@
 """Базовый класс метаэвристических алгоритмов."""
 
 from abc import ABC, abstractmethod
+from numbers import Real
 from types import TracebackType
 from typing import Any, Self
 
@@ -14,6 +15,9 @@ from metaheuristics_lib.core.types import (
     OptimizationResult,
     normalize_bounds,
 )
+
+STOP_REASON_TARGET = "target"
+STOP_REASON_MAX_FEV = "max_fev"
 
 
 class BaseAlgorithm(ABC):
@@ -38,6 +42,11 @@ class BaseAlgorithm(ABC):
         agents: размер популяции.
         max_iter: максимальное число итераций.
         seed: seed генератора случайных чисел.
+        max_fev: мягкий лимит обращений к целевой функции. Проверяется
+            на границах итераций, поэтому фактическое значение ``nfev``
+            может превысить лимит в пределах одной итерации.
+        target: целевое значение fitness. Если лучшее значение не больше
+            ``target``, алгоритм останавливается.
         evaluator: вычислитель целевой функции. По умолчанию
             последовательный.
         **params: дополнительные параметры конкретного алгоритма.
@@ -52,6 +61,8 @@ class BaseAlgorithm(ABC):
         max_iter: int = 50,
         seed: int | None = None,
         *,
+        max_fev: int | None = None,
+        target: float | None = None,
         evaluator: Evaluator | None = None,
         **params: Any,
     ) -> None:
@@ -82,12 +93,37 @@ class BaseAlgorithm(ABC):
                 "Параметр max_iter должен быть положительным, "
                 f"получено {max_iter}"
             )
+        if max_fev is not None:
+            if isinstance(max_fev, bool) or not isinstance(
+                max_fev,
+                (int, np.integer),
+            ):
+                raise TypeError(
+                    f"Параметр max_fev должен быть целым, получено {max_fev!r}"
+                )
+            if max_fev < 1:
+                raise ValueError(
+                    "Параметр max_fev должен быть положительным, "
+                    f"получено {max_fev}"
+                )
+        if target is not None:
+            if isinstance(target, bool) or not isinstance(target, Real):
+                raise TypeError(
+                    f"Параметр target должен быть числом, получено {target!r}"
+                )
+            if not np.isfinite(float(target)):
+                raise ValueError(
+                    "Параметр target должен быть конечным числом, "
+                    f"получено {target}"
+                )
 
         self.problem = problem
         self.dim = int(dim)
         self.bounds = normalize_bounds(bounds, self.dim)
         self.agents = int(agents)
         self.max_iter = int(max_iter)
+        self.max_fev = int(max_fev) if max_fev is not None else None
+        self.target = float(target) if target is not None else None
         self.seed = seed
         self.params: dict[str, Any] = dict(params)
         self.rng = np.random.default_rng(seed)
@@ -96,6 +132,7 @@ class BaseAlgorithm(ABC):
         )
         self.iteration = 0
         self.nfev = 0
+        self.stop_reason: str | None = None
         self.best_solution: npt.NDArray[np.float64] | None = None
         self.best_fitness = float("inf")
 
@@ -115,10 +152,27 @@ class BaseAlgorithm(ABC):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
 
+    def check_stop(self) -> str | None:
+        """Проверяет условия ранней остановки.
+
+        Returns:
+            ``"target"``, если достигнуто целевое значение, ``"max_fev"``,
+            если исчерпан лимит вычислений, или ``None``, если нужно
+            продолжать.
+        """
+        if self.stop_reason is not None:
+            return self.stop_reason
+        if self.target is not None and self.best_fitness <= self.target:
+            self.stop_reason = STOP_REASON_TARGET
+        elif self.max_fev is not None and self.nfev >= self.max_fev:
+            self.stop_reason = STOP_REASON_MAX_FEV
+        return self.stop_reason
+
     def _reset_state(self) -> None:
         """Сбрасывает результаты предыдущего запуска."""
         self.iteration = 0
         self.nfev = 0
+        self.stop_reason = None
         self.best_solution = None
         self.best_fitness = float("inf")
 

@@ -129,3 +129,33 @@ def test_mp_matches_serial_with_two_processes(
         parallel_history,
     )
     assert parallel.nfev == serial.nfev
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(("serial_factory", "mp_factory"), MP_PAIRS)
+def test_mp_matches_serial_with_max_fev(
+    serial_factory: AlgorithmFactory,
+    mp_factory: AlgorithmFactory,
+    process_context: BaseContext | None,
+) -> None:
+    args = {**ARGS, "max_iter": 10, "max_fev": 15}
+    serial = serial_factory(**args)
+    parallel = mp_factory(
+        **args,
+        processes=2,
+        mp_context=process_context,
+    )
+
+    with Runner(serial, iteration_info=False) as runner:
+        serial_result, serial_history, _, _ = runner.run()
+    with Runner(parallel, iteration_info=False) as runner:
+        parallel_result, parallel_history, _, _ = runner.run()
+
+    _assert_same_result(
+        serial_result,
+        serial_history,
+        parallel_result,
+        parallel_history,
+    )
+    assert parallel.stop_reason == serial.stop_reason
+    assert parallel.nfev == serial.nfev
