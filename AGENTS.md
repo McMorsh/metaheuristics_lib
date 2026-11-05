@@ -586,7 +586,9 @@ benchmark, тесты сходимости и пороги покрытия; ш�
 и `mpi4py` 4.1.2: `mpiexec -n 2` работает, интеграционные тесты
 проходят. CI на GitHub прошёл, включая jobs `tests`, `package`
 и `mpi`. Добавлена проверка конечности fitness: `NaN`, `inf` и
-`-inf` отклоняются с `ValueError`.
+`-inf` отклоняются с `ValueError`. Добавлены `max_fev` и `target`:
+`Runner` останавливается по целевому fitness или бюджету вычислений,
+а причина доступна в `algorithm.stop_reason`.
 
 Осталось:
 
