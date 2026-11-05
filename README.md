@@ -186,6 +186,13 @@ algorithm = WhaleOptimizationAlgorithmMPI(
 mpiexec -n 4 python -m examples.run_mpi --iterations 100 --agents 20
 ```
 
+Если системного MPI нет и нет прав root, на Linux можно поставить
+готовый рантайм из PyPI:
+
+```bash
+pip install "mpich>=5" "mpi4py>=4"
+```
+
 Все ранги выполняют одинаковые обновления, а вычисление функции
 распределяется через MPI. Результат печатает только rank 0. `mpi4py`
 импортируется лениво: без него библиотека работает в последовательном
