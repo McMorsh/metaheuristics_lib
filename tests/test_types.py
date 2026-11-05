@@ -45,6 +45,7 @@ def test_result_is_a_copy() -> None:
         ([(0.0, 1.0), (2.0, 1.0)], 2),
         ((float("nan"), 1.0), 2),
         ((0.0, float("inf")), 2),
+        ([[0.0, float("nan")], [0.0, 1.0]], 2),
     ],
 )
 def test_invalid_bounds_raise(bounds: object, dim: int) -> None:

@@ -191,6 +191,35 @@ def test_csa_rejects_invalid_awareness() -> None:
         algorithm.initialize()
 
 
+def test_get_result_requires_initialization() -> None:
+    algorithm = WhaleOptimizationAlgorithm(
+        sphere,
+        2,
+        BOUNDS,
+        agents=8,
+        max_iter=1,
+        seed=42,
+    )
+
+    with pytest.raises(RuntimeError, match="не инициализирован"):
+        algorithm.get_result()
+
+
+def test_csa_warns_about_deprecated_expand_rate() -> None:
+    algorithm = CrowSearchAlgorithm(
+        sphere,
+        2,
+        BOUNDS,
+        agents=4,
+        max_iter=1,
+        seed=42,
+        expand_rate=1.2,
+    )
+
+    with pytest.warns(DeprecationWarning, match="expand_rate"):
+        algorithm.initialize()
+
+
 def test_algorithm_rejects_invalid_dim() -> None:
     with pytest.raises(ValueError, match="dim"):
         WhaleOptimizationAlgorithm(sphere, 0, BOUNDS)

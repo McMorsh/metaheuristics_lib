@@ -417,3 +417,18 @@ def test_invalid_max_iter_is_rejected() -> None:
             agents=8,
             max_iter=0,
         )
+
+
+def test_runner_rejects_algorithm_with_mutated_max_iter() -> None:
+    algorithm = WhaleOptimizationAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=8,
+        max_iter=1,
+        seed=42,
+    )
+    algorithm.max_iter = 0
+
+    with pytest.raises(ValueError, match="max_iter"):
+        Runner(algorithm, iteration_info=False).run()

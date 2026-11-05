@@ -3,9 +3,11 @@
 import numpy as np
 import pytest
 
+from problems.continuous import sphere
 from utils.algorithm_utils import (
     enforce_boundaries,
     enforce_boundaries_csa,
+    evaluate_fitness_serial,
     initialize_bounds,
     initialize_positions,
 )
@@ -104,3 +106,11 @@ def test_enforce_boundaries_csa_rejects_matrix() -> None:
             np.zeros((2, 2)),
             BOUNDS,
         )
+
+
+def test_evaluate_fitness_serial_matches_direct_calls() -> None:
+    positions = np.array([[0.0, 0.0], [1.0, 2.0]])
+
+    values = evaluate_fitness_serial(positions, sphere)
+
+    np.testing.assert_allclose(values, [0.0, 5.0])

@@ -9,6 +9,7 @@ from algorithms.whale.whale_optimization_algorithm import (
 from core.runner import Runner
 from problems.continuous import sphere
 from utils.metrics import (
+    MultipleRunResults,
     area_under_curve,
     best_so_far,
     mean_best,
@@ -73,6 +74,11 @@ def test_area_under_curve_rejects_empty_history() -> None:
         area_under_curve([])
 
 
+def test_area_under_curve_rejects_matrix() -> None:
+    with pytest.raises(ValueError, match="одномерной"):
+        area_under_curve(np.array([[1.0, 2.0]]))
+
+
 def test_time_to_target_returns_first_index() -> None:
     assert time_to_target([5.0, 4.0, 3.0], 4.0) == 1
 
@@ -107,6 +113,16 @@ def test_mean_best_accepts_numpy_histories() -> None:
 def test_mean_best_rejects_empty_list() -> None:
     with pytest.raises(ValueError, match="пустым"):
         mean_best([])
+
+
+def test_mean_best_rejects_matrix_history() -> None:
+    with pytest.raises(ValueError, match="одномерной"):
+        mean_best([np.array([[1.0, 2.0]])])
+
+
+def test_mean_best_rejects_empty_history() -> None:
+    with pytest.raises(ValueError, match="пустой"):
+        mean_best([[]])
 
 
 def test_run_multiple_returns_expected_structure() -> None:
@@ -204,3 +220,18 @@ def test_summarize_runs_returns_statistics() -> None:
 def test_summarize_runs_rejects_empty_results() -> None:
     with pytest.raises(ValueError, match="пустым"):
         summarize_runs([])
+
+
+def test_summarize_runs_rejects_empty_histories() -> None:
+    results = [
+        MultipleRunResults(
+            best_fitness=[],
+            history_of_best_fitness=[],
+            best_x=[],
+            history_of_best_x=[],
+            time=[],
+        )
+    ]
+
+    with pytest.raises(ValueError, match="Истории"):
+        summarize_runs(results)

@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from algorithms._common import resolve_processes
 from algorithms.bee_colony.artificial_bee_colony import ArtificialBeeColony
 from algorithms.bee_colony.artificial_bee_colony_mp import (
     ArtificialBeeColonyMP,
@@ -35,6 +36,24 @@ from core.types import OptimizationResult
 from problems.continuous import sphere
 
 AlgorithmFactory = Callable[..., BaseAlgorithm]
+
+
+def test_resolve_processes_prefers_new_name() -> None:
+    assert resolve_processes(2, None) == 2
+
+
+def test_resolve_processes_supports_deprecated_name() -> None:
+    with pytest.warns(DeprecationWarning, match="process"):
+        assert resolve_processes(None, 3) == 3
+
+
+def test_resolve_processes_rejects_conflict() -> None:
+    with (
+        pytest.warns(DeprecationWarning, match="process"),
+        pytest.raises(ValueError, match="противоречат"),
+    ):
+        resolve_processes(2, 3)
+
 
 MP_PAIRS = [
     (ArtificialBeeColony, ArtificialBeeColonyMP),
@@ -93,6 +112,7 @@ def test_mp_matches_serial_with_one_process(
         parallel_result,
         parallel_history,
     )
+    assert parallel.nfev == serial.nfev
 
 
 @pytest.mark.integration
@@ -118,3 +138,4 @@ def test_mp_matches_serial_with_two_processes(
         parallel_result,
         parallel_history,
     )
+    assert parallel.nfev == serial.nfev

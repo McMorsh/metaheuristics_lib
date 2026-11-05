@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import cast
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -74,6 +75,35 @@ def test_plot_convergence_rejects_empty_history() -> None:
         plot_convergence([])
 
 
+def test_plot_convergence_rejects_three_dimensional_array() -> None:
+    with pytest.raises(ValueError, match="двумерными"):
+        plot_convergence(np.zeros((2, 2, 2)))
+
+
+def test_plot_convergence_fills_missing_labels(tmp_path: Path) -> None:
+    path = tmp_path / "convergence_labels.png"
+    plot_convergence(
+        [[1.0, 0.5], [2.0, 1.0]],
+        labels=["first"],
+        save_path=path,
+    )
+    assert path.exists()
+
+
+def test_plot_convergence_shows_without_save_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shown: list[bool] = []
+    monkeypatch.setattr(plt, "show", lambda: shown.append(True))
+
+    try:
+        plot_convergence([1.0, 0.5])
+    finally:
+        plt.close("all")
+
+    assert shown == [True]
+
+
 def test_plot_fitness_function_above_saves_file(
     tmp_path: Path,
 ) -> None:
@@ -82,6 +112,32 @@ def test_plot_fitness_function_above_saves_file(
         sphere,
         (-1.0, 1.0),
         resolution=5,
+        save_path=path,
+    )
+    assert path.exists()
+
+
+def test_plot_fitness_function_above_draws_best_point(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "surface_top_best.png"
+    plot_fitness_function_above(
+        sphere,
+        (-1.0, 1.0),
+        resolution=5,
+        best_pos=[0.0, 0.0],
+        save_path=path,
+    )
+    assert path.exists()
+
+
+def test_plot_fitness_function_draws_best_point(tmp_path: Path) -> None:
+    path = tmp_path / "surface_3d_best.png"
+    plot_fitness_function(
+        sphere,
+        (-1.0, 1.0),
+        resolution=5,
+        best_pos=[0.0, 0.0],
         save_path=path,
     )
     assert path.exists()
@@ -210,3 +266,8 @@ def test_plot_builder_returns_grid() -> None:
     assert grid_y.shape == (5, 5)
     assert grid_z.shape == (5, 5)
     assert "sphere" in title
+
+
+def test_plot_builder_rejects_zero_resolution() -> None:
+    with pytest.raises(ValueError, match="resolution"):
+        plot_builder(sphere, (-1.0, 1.0), resolution=0, title=None)

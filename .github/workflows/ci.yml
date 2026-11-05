@@ -22,7 +22,25 @@ jobs:
       - run: ruff format --check .
       - run: mypy .
       - run: pytest -q
+      - run: pytest -q --cov=core --cov=utils --cov-report=term-missing --cov-fail-under=80
+      - run: pytest -q --cov=algorithms --cov=problems --cov-report=term-missing --cov-fail-under=70
       - run: pytest -q -m integration
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install build
+      - run: python -m build
+      - run: python -m venv /tmp/wheel-venv
+      - run: /tmp/wheel-venv/bin/pip install --upgrade pip
+      - run: /tmp/wheel-venv/bin/pip install dist/*.whl
+      - run: /tmp/wheel-venv/bin/python -c "import algorithms, core, problems, utils, metaheuristics_lib; print(metaheuristics_lib.__file__)"
+        working-directory: /tmp
 
   mpi:
     runs-on: ubuntu-latest
