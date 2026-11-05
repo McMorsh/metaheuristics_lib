@@ -103,7 +103,7 @@
 - Циклические импорты запрещены. Общие типы и протоколы держите в
   `src/metaheuristics_lib/core/`.
 - Один модуль - одна ответственность. Реализации алгоритмов - в
-  `src/metaheuristics_lib/algorithms/<name>/`, задачи - в
+  `src/metaheuristics_lib/algorithms/<name>/`, задачи и реестр - в
   `src/metaheuristics_lib/problems/`, общие функции - в
   `src/metaheuristics_lib/utils/`.
 - Не называйте модуль `test.py` внутри пакета: при явном запуске pytest
@@ -588,7 +588,9 @@ benchmark, тесты сходимости и пороги покрытия; ш�
 и `mpi`. Добавлена проверка конечности fitness: `NaN`, `inf` и
 `-inf` отклоняются с `ValueError`. Добавлены `max_fev` и `target`:
 `Runner` останавливается по целевому fitness или бюджету вычислений,
-а причина доступна в `algorithm.stop_reason`.
+а причина доступна в `algorithm.stop_reason`. Добавлен реестр задач
+`problems/registry.py` с границами и оптимумами; benchmark берёт
+задачи из него.
 
 Осталось:
 
