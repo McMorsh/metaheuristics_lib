@@ -17,16 +17,19 @@
 
 ```text
 metaheuristics_lib/
-├── algorithms/
-│   ├── bee_colony/
-│   ├── crow_search/
-│   ├── emperor_penguin/
-│   ├── grey_wolf/
-│   └── whale/
-├── core/
-├── metaheuristics_lib/   # публичный фасад
-├── problems/
-├── utils/
+├── src/
+│   └── metaheuristics_lib/
+│       ├── algorithms/
+│       │   ├── bee_colony/
+│       │   ├── crow_search/
+│       │   ├── emperor_penguin/
+│       │   ├── grey_wolf/
+│       │   └── whale/
+│       ├── core/
+│       ├── problems/
+│       ├── utils/
+│       ├── __init__.py   # публичный фасад
+│       └── py.typed
 ├── examples/
 ├── tests/
 ├── pyproject.toml
@@ -63,9 +66,11 @@ pip install -e ".[dev,plot,mpi]"
 ## Публичный API
 
 Пакет `metaheuristics_lib` реэкспортирует алгоритмы, `Runner`,
-`Evaluator`, границы и тестовые функции. Плоские импорты
-`from core...`, `from algorithms...` и `from problems...` остаются
-доступными для совместимости. Пример использования приведен ниже.
+`Evaluator`, границы и тестовые функции. Внутренние модули доступны
+как `metaheuristics_lib.core...`, `metaheuristics_lib.algorithms...`,
+`metaheuristics_lib.problems...` и `metaheuristics_lib.utils...`.
+Отдельных top-level пакетов `core`, `utils`, `problems` и `algorithms`
+больше нет. Пример использования приведен ниже.
 
 ## Быстрый старт
 
@@ -118,7 +123,7 @@ print(len(history))
 Параметр `processes` задаёт число процессов:
 
 ```python
-from algorithms.whale.whale_optimization_algorithm_mp import (
+from metaheuristics_lib.algorithms import (
     WhaleOptimizationAlgorithmMP,
 )
 
@@ -166,7 +171,7 @@ algorithm = WhaleOptimizationAlgorithmMP(
 ## MPI
 
 ```python
-from algorithms.whale.whale_optimization_algorithm_mpi import (
+from metaheuristics_lib.algorithms import (
     WhaleOptimizationAlgorithmMPI,
 )
 
@@ -209,7 +214,8 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 
 Графики сохраняются в `plots/` или в каталог из `--output-dir`.
 `examples.benchmark` печатает среднее лучшее значение, `nfev` и время
-для всех пяти алгоритмов на sphere или rastrigin.
+для всех пяти алгоритмов на sphere или rastrigin. Команды примеров
+требуют editable-установки пакета: `pip install -e ".[dev,plot]"`.
 
 ## Тесты и проверки
 
@@ -219,8 +225,14 @@ ruff format --check .
 mypy .
 pytest -q
 pytest -q -m integration
-pytest -q --cov=core --cov=utils --cov-fail-under=80
-pytest -q --cov=algorithms --cov=problems --cov-fail-under=70
+pytest -q \
+    --cov=src/metaheuristics_lib/core \
+    --cov=src/metaheuristics_lib/utils \
+    --cov-fail-under=80
+pytest -q \
+    --cov=src/metaheuristics_lib/algorithms \
+    --cov=src/metaheuristics_lib/problems \
+    --cov-fail-under=70
 ```
 
 Интеграционные тесты запускают реальный пул процессов и могут быть

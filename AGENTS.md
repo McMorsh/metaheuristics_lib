@@ -72,21 +72,24 @@
 1. `from __future__ import ...`, если используется.
 2. Стандартная библиотека.
 3. Сторонние библиотеки (`numpy`, `mpi4py`, `matplotlib`).
-4. Модули проекта (`core`, `utils`, `problems`, `algorithms`).
+4. Модули проекта (`metaheuristics_lib`).
 
 - Группы разделяйте одной пустой строкой, внутри группы сортируйте по алфавиту.
 - Один модуль на строку: `import os, sys` запрещён. Несколько имён в
   `from module import a, b` допустимы.
-- Используйте абсолютные импорты. Внутри проекта действует плоская
-  раскладка: пишите `from core...`, `from utils...`, `from algorithms...`.
+- Используйте абсолютные импорты. Пакеты лежат под `src/metaheuristics_lib/`:
+  пишите `from metaheuristics_lib.core...`, `from metaheuristics_lib.utils...`,
+  `from metaheuristics_lib.problems...` и
+  `from metaheuristics_lib.algorithms...`.
   Публичный фасад `metaheuristics_lib` реэкспортирует стабильный API для
-  пользователей, но внутренние модули не должны импортировать сами себя
-  через `metaheuristics_lib.*`.
+  пользователей. Top-level пакетов `core`, `utils`, `problems` и
+  `algorithms` больше нет, поэтому такие импорты запрещены.
 - Запрещены `from module import *`.
 - Не оставляйте неиспользуемые импорты.
 - Тяжёлые опциональные зависимости (`mpi4py`, `matplotlib`) импортируйте в
   модуле, который их реально использует, или лениво внутри функции. Импорт
-  `core` и `algorithms` не должен требовать MPI или matplotlib.
+  `metaheuristics_lib.core` и `metaheuristics_lib.algorithms` не должен
+  требовать MPI или matplotlib.
 
 ### Модули и пакеты
 
@@ -97,9 +100,12 @@
 - `__init__.py` содержит только явные реэкспорты и `__all__`. Никакой настройки
   логов, чтения файлов и других побочных эффектов при импорте.
 - Точка входа скрипта защищена `if __name__ == "__main__":`.
-- Циклические импорты запрещены. Общие типы и протоколы держите в `core/`.
+- Циклические импорты запрещены. Общие типы и протоколы держите в
+  `src/metaheuristics_lib/core/`.
 - Один модуль - одна ответственность. Реализации алгоритмов - в
-  `algorithms/<name>/`, задачи - в `problems/`, общие функции - в `utils/`.
+  `src/metaheuristics_lib/algorithms/<name>/`, задачи - в
+  `src/metaheuristics_lib/problems/`, общие функции - в
+  `src/metaheuristics_lib/utils/`.
 - Не называйте модуль `test.py` внутри пакета: при явном запуске pytest
   примет его за тест, а имя путается с тестовыми модулями. Тесты лежат
   в `tests/`.
@@ -151,7 +157,8 @@
 - Не используйте `# type: ignore` без кода ошибки и причины. Формат:
   `# type: ignore[arg-type]  # причина`.
 - Новые модули не должны ухудшать проверку `mypy`. Цель - `strict = true`;
-  минимум - для `core/`, `utils/` и `problems/`.
+  минимум - для `metaheuristics_lib.core`, `metaheuristics_lib.utils` и
+  `metaheuristics_lib.problems`.
 
 ## Классы и данные
 
@@ -321,8 +328,10 @@ class Bounds:
 - Фикстуры держите в `conftest.py`. Не выполняйте тяжёлую работу на уровне
   модуля.
 - Тесты не должны зависеть от порядка запуска и оставлять после себя файлы.
-- Ключевая логика (`core/`, `utils/`, `problems/`, `algorithms/`) покрывается
-  тестами. Демонстрационные скрипты в `examples/` можно не покрывать.
+- Ключевая логика (`metaheuristics_lib.core`, `metaheuristics_lib.utils`,
+  `metaheuristics_lib.problems`, `metaheuristics_lib.algorithms`)
+  покрывается тестами. Демонстрационные скрипты в `examples/` можно не
+  покрывать.
 - Параллельные тесты помечайте `@pytest.mark.integration` и запускайте
   отдельно: `pytest -q -m integration`. Если `mpi4py` не установлен,
   используйте `pytest.importorskip("mpi4py")`.
@@ -334,7 +343,7 @@ import numpy as np
 import numpy.typing as npt
 import pytest
 
-from problems.continuous import sphere
+from metaheuristics_lib.problems.continuous import sphere
 
 
 @pytest.mark.parametrize(
@@ -384,7 +393,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "metaheuristics-lib"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.12"
 dependencies = ["numpy>=2.1"]
 
@@ -400,14 +409,12 @@ dev = [
 plot = ["matplotlib>=3.9"]
 mpi = ["mpi4py>=4"]
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
 [tool.setuptools.packages.find]
-include = [
-    "core*",
-    "utils*",
-    "problems*",
-    "algorithms*",
-    "metaheuristics_lib*",
-]
+where = ["src"]
+include = ["metaheuristics_lib*"]
 
 [tool.ruff]
 line-length = 79
@@ -417,9 +424,13 @@ target-version = "py312"
 select = ["E4", "E7", "E9", "E501", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 ignore = ["RUF001", "RUF002", "RUF003"]  # кириллица в тексте - норма проекта
 
+[tool.ruff.lint.isort]
+known-first-party = ["metaheuristics_lib"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
+mypy_path = "src"
 
 [[tool.mypy.overrides]]
 module = ["matplotlib.*", "mpi4py.*"]
@@ -427,9 +438,13 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src", "."]
 markers = ["integration: тесты с MPI или несколькими процессами"]
 addopts = "-ra -m 'not integration'"
+
+[tool.coverage.run]
+branch = true
+source = ["src/metaheuristics_lib"]
 ```
 
 `E501` включён: длина строки 79 контролируется линтером. Строки, которые
@@ -447,10 +462,10 @@ per-file ignores для legacy-кода.
 Включайте его в `[tool.mypy]`, а legacy-модули исключайте через baseline или
 `ignore_errors`.
 
-Пример соответствует текущей плоской раскладке: `core`, `utils`,
-`algorithms` и `problems` - обычные пакеты. Публичный фасад
-`metaheuristics_lib` включен в `include`; при переходе на `src`-layout
-обновите `include` и импорты.
+Пример соответствует текущей `src`-раскладке: пакеты лежат в
+`src/metaheuristics_lib/`, публичный фасад включен в wheel, а
+отдельных top-level пакетов `core`, `utils`, `problems` и
+`algorithms` нет.
 
 ## Сборка и проверка
 
@@ -468,8 +483,14 @@ ruff check .
 ruff format --check .
 mypy .
 pytest -q
-pytest -q --cov=core --cov=utils --cov-fail-under=80
-pytest -q --cov=algorithms --cov=problems --cov-fail-under=70
+pytest -q \
+    --cov=src/metaheuristics_lib/core \
+    --cov=src/metaheuristics_lib/utils \
+    --cov-fail-under=80
+pytest -q \
+    --cov=src/metaheuristics_lib/algorithms \
+    --cov=src/metaheuristics_lib/problems \
+    --cov-fail-under=70
 ```
 
 Windows PowerShell:
@@ -483,8 +504,14 @@ ruff check .
 ruff format --check .
 mypy .
 pytest -q
-pytest -q --cov=core --cov=utils --cov-fail-under=80
-pytest -q --cov=algorithms --cov=problems --cov-fail-under=70
+pytest -q `
+    --cov=src/metaheuristics_lib/core `
+    --cov=src/metaheuristics_lib/utils `
+    --cov-fail-under=80
+pytest -q `
+    --cov=src/metaheuristics_lib/algorithms `
+    --cov=src/metaheuristics_lib/problems `
+    --cov-fail-under=70
 ```
 
 Интеграционные тесты с реальным пулом процессов запускайте отдельно:
@@ -501,10 +528,11 @@ python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 ```
 
-`python -m` добавляет корень проекта в `sys.path`, поэтому импорты
-`from core...` работают без `PYTHONPATH`. `examples/run_mp.py` использует
-`multiprocessing`, а `examples/run_mpi.py` - MPI. Графики сохраняются в
-`plots/` или в каталог из `--output-dir`.
+`python -m` добавляет корень проекта в `sys.path`, но пакет должен быть
+установлен: `pip install -e ".[dev,plot]"`. Импорты
+`from metaheuristics_lib...` работают из установленного пакета.
+`examples/run_mp.py` использует `multiprocessing`, а `examples/run_mpi.py`
+- MPI. Графики сохраняются в `plots/` или в каталог из `--output-dir`.
 
 Перед запуском установите `numpy` и `matplotlib` (extra `plot`). Для MPI
 нужны `mpi4py` и системный MPI.
@@ -516,9 +544,11 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 3. Запустите `pytest -q`; для изменений в multiprocessing -
    `pytest -q -m integration`.
 4. Для изменений в `core`/`utils` запустите
-   `pytest -q --cov=core --cov=utils --cov-fail-under=80`; для
-   `algorithms`/`problems` - `pytest -q --cov=algorithms
-   --cov=problems --cov-fail-under=70`.
+   `pytest -q --cov=src/metaheuristics_lib/core
+   --cov=src/metaheuristics_lib/utils --cov-fail-under=80`; для
+   `src/metaheuristics_lib/algorithms` и `src/metaheuristics_lib/problems`
+   - `pytest -q --cov=src/metaheuristics_lib/algorithms
+   --cov=src/metaheuristics_lib/problems --cov-fail-under=70`.
 5. Запустите затронутый пример или скрипт.
 6. Просмотрите `git diff`: в нём не должно быть отладочного вывода, кэшей,
    графиков, секретов и случайных переименований.
@@ -543,7 +573,9 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 
 Основная миграция выполнена: добавлены `pyproject.toml`, `__init__.py`,
 `py.typed`, публичный фасад `metaheuristics_lib`, тесты, Ruff и strict
-mypy; serial и multiprocessing режимы проверены. Варианты `_mp` и `_mpi`
+mypy; serial и multiprocessing режимы проверены. Проект переведен на
+`src`-layout: пакеты лежат в `src/metaheuristics_lib/`, импорты идут
+через `metaheuristics_lib.*`. Варианты `_mp` и `_mpi`
 сведены к обёрткам над общим алгоритмом и `Evaluator`; глобальный
 `np.random.seed` и жёсткие пути в примерах удалены. Широкий
 `except Exception` остался только в `MPIEvaluator`, чтобы разослать
