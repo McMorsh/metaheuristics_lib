@@ -1,6 +1,7 @@
 """Artificial Bee Colony (ABC)."""
 
 import numpy as np
+import numpy.typing as npt
 
 from core.algorithm import BaseAlgorithm
 
@@ -48,49 +49,80 @@ class ArtificialBeeColony(BaseAlgorithm):
         self._limit = limit
 
         self.bees = self._initial_positions()
-        self.fitness = self.evaluator.evaluate(self.bees)
+        self.fitness = self._evaluate(self.bees)
         self.local_best_bee = self.bees.copy()
         self.local_best_fitness = self.fitness.copy()
         self.trial = np.zeros(self.agents, dtype=np.int64)
         self._update_best(self.bees, self.fitness)
         self.iteration = 0
 
-    def _neighbour(self, index: int) -> None:
-        """Обновляет источник пищи по правилам рабочей пчелы."""
-        other = int(self.rng.integers(0, self.agents - 1))
-        if other >= index:
-            other += 1
-
-        phi = self.rng.uniform(-1.0, 1.0, self.dim)
-        candidate = self.bees[index] + phi * (
-            self.bees[index] - self.bees[other]
+    def _select_partners(
+        self,
+        indices: npt.NDArray[np.int64],
+    ) -> npt.NDArray[np.int64]:
+        """Возвращает партнёра для каждой выбранной пчелы."""
+        partners = np.asarray(
+            self.rng.integers(0, self.agents - 1, size=indices.size),
+            dtype=np.int64,
         )
-        candidate = self._clip(candidate)
-        value = float(
-            self.evaluator.evaluate(candidate.reshape(1, self.dim))[0]
-        )
+        return partners + (partners >= indices)
 
-        if value < self.local_best_fitness[index]:
-            self.bees[index] = candidate
-            self.fitness[index] = value
-            self.local_best_bee[index] = candidate
-            self.local_best_fitness[index] = value
-            self.trial[index] = 0
-        else:
-            self.trial[index] += 1
+    def _propose_candidates(
+        self,
+        indices: npt.NDArray[np.int64],
+    ) -> npt.NDArray[np.float64]:
+        """Строит кандидатов по состоянию популяции на начало фазы."""
+        partners = self._select_partners(indices)
+        phi = self.rng.uniform(-1.0, 1.0, size=(indices.size, self.dim))
+        base = self.bees[indices]
+        return self._clip(base + phi * (base - self.bees[partners]))
+
+    def _apply_candidates(
+        self,
+        indices: npt.NDArray[np.int64],
+        candidates: npt.NDArray[np.float64],
+        values: npt.NDArray[np.float64],
+    ) -> None:
+        """Применяет улучшения и обновляет счётчики попыток."""
+        for position, index in enumerate(indices):
+            value = float(values[position])
+            if value < self.local_best_fitness[index]:
+                self.bees[index] = candidates[position]
+                self.fitness[index] = value
+                self.local_best_bee[index] = candidates[position]
+                self.local_best_fitness[index] = value
+                self.trial[index] = 0
+            else:
+                self.trial[index] += 1
 
     def iterate(self) -> None:
-        """Выполняет одну итерацию ABC."""
-        for index in range(self.agents):
-            self._neighbour(index)
+        """Выполняет одну итерацию ABC.
+
+        В отличие от последовательного варианта, рабочие и наблюдающие
+        пчёлы оценивают пакет кандидатов, построенных по состоянию на
+        начало фазы. Кандидат не видит обновлений, сделанных другими
+        пчёлами в той же фазе.
+        """
+        indices = np.arange(self.agents, dtype=np.int64)
+        candidates = self._propose_candidates(indices)
+        values = self._evaluate(candidates)
+        self._apply_candidates(indices, candidates, values)
 
         shifted = self.local_best_fitness - np.min(self.local_best_fitness)
         weights = 1.0 / (shifted + np.finfo(np.float64).eps)
         probabilities = weights / np.sum(weights)
 
-        for _ in range(self.agents):
-            index = int(self.rng.choice(self.agents, p=probabilities))
-            self._neighbour(index)
+        chosen = np.asarray(
+            self.rng.choice(
+                self.agents,
+                size=self.agents,
+                p=probabilities,
+            ),
+            dtype=np.int64,
+        )
+        candidates = self._propose_candidates(chosen)
+        values = self._evaluate(candidates)
+        self._apply_candidates(chosen, candidates, values)
 
         scout_indices = np.flatnonzero(self.trial > self._limit)
         if scout_indices.size:
@@ -101,7 +133,7 @@ class ArtificialBeeColony(BaseAlgorithm):
                 high=high,
                 size=(scout_indices.size, self.dim),
             )
-            values = self.evaluator.evaluate(positions)
+            values = self._evaluate(positions)
             for position_index, scout_index in enumerate(scout_indices):
                 position = positions[position_index]
                 value = float(values[position_index])

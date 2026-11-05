@@ -43,7 +43,7 @@ class GreyWolfOptimizer(BaseAlgorithm):
             )
 
         self.wolves = self._initial_positions()
-        self.fitness = self.evaluator.evaluate(self.wolves)
+        self.fitness = self._evaluate(self.wolves)
         self._rank_leaders()
         self._update_best(self.wolves, self.fitness)
         self.iteration = 0
@@ -59,46 +59,28 @@ class GreyWolfOptimizer(BaseAlgorithm):
         self.delta_fit = float(self.fitness[order[2]])
 
     def iterate(self) -> None:
-        """Выполняет одну итерацию GWO."""
+        """Выполняет одну итерацию GWO.
+
+        Расчёт лидеров и координат векторизован по агентам, размерностям
+        и трём лидерам, чтобы убрать двойной цикл Python.
+        """
         a = 2.0 - 2.0 * self.iteration / self.max_iter
+        draws = self.rng.random((self.agents, self.dim, 3, 2))
+        r1 = draws[:, :, :, 0]
+        r2 = draws[:, :, :, 1]
 
-        for index in range(self.agents):
-            for dimension in range(self.dim):
-                r1 = self.rng.random()
-                r2 = self.rng.random()
-                a1 = 2.0 * a * r1 - a
-                c1 = 2.0 * r2
-                distance_alpha = abs(
-                    c1 * self.alpha_pos[dimension]
-                    - self.wolves[index, dimension]
-                )
-                x1 = self.alpha_pos[dimension] - a1 * distance_alpha
+        leaders = np.stack(
+            [self.alpha_pos, self.beta_pos, self.delta_pos],
+        )
+        leaders = leaders.T[None, :, :]
+        wolves = self.wolves[:, :, None]
 
-                r1 = self.rng.random()
-                r2 = self.rng.random()
-                a2 = 2.0 * a * r1 - a
-                c2 = 2.0 * r2
-                distance_beta = abs(
-                    c2 * self.beta_pos[dimension]
-                    - self.wolves[index, dimension]
-                )
-                x2 = self.beta_pos[dimension] - a2 * distance_beta
+        coefficient_a = a * (2.0 * r1 - 1.0)
+        distance = np.abs(2.0 * r2 * leaders - wolves)
+        candidates = leaders - coefficient_a * distance
 
-                r1 = self.rng.random()
-                r2 = self.rng.random()
-                a3 = 2.0 * a * r1 - a
-                c3 = 2.0 * r2
-                distance_delta = abs(
-                    c3 * self.delta_pos[dimension]
-                    - self.wolves[index, dimension]
-                )
-                x3 = self.delta_pos[dimension] - a3 * distance_delta
-
-                self.wolves[index, dimension] = (x1 + x2 + x3) / 3.0
-
-            self.wolves[index] = self._clip(self.wolves[index])
-
-        self.fitness = self.evaluator.evaluate(self.wolves)
+        self.wolves = self._clip(np.mean(candidates, axis=2))
+        self.fitness = self._evaluate(self.wolves)
         self._rank_leaders()
         self._update_best(self.wolves, self.fitness)
         self.iteration += 1

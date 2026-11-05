@@ -55,7 +55,7 @@ class CrowSearchAlgorithm(BaseAlgorithm):
 
         self.crows = self._initial_positions()
         self.best_crows = self.crows.copy()
-        self.fitness = self.evaluator.evaluate(self.crows)
+        self.fitness = self._evaluate(self.crows)
         self.memory_fitness = self.fitness.copy()
         self._update_best(self.best_crows, self.memory_fitness)
         self.iteration = 0
@@ -84,7 +84,7 @@ class CrowSearchAlgorithm(BaseAlgorithm):
                 )
             new_crows[index] = self._clip(new_crows[index])
 
-        new_fitness = self.evaluator.evaluate(new_crows)
+        new_fitness = self._evaluate(new_crows)
         improved = new_fitness < self.fitness
         self.best_crows[improved] = new_crows[improved]
         self.memory_fitness[improved] = new_fitness[improved]

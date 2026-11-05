@@ -23,6 +23,12 @@ class BaseAlgorithm(ABC):
     поиска и лучшее найденное решение. Наследники реализуют
     :meth:`initialize` и :meth:`iterate`.
 
+    Атрибут ``nfev`` считает обращения к целевой функции за текущий
+    запуск. Счётчик сбрасывается в :meth:`initialize`, поэтому после
+    повторного запуска он не накапливается. Каждая позиция в пакете
+    считается отдельным обращением, даже если алгоритм повторно
+    оценивает уже известную точку.
+
     Args:
         problem: целевая функция, принимающая вектор и возвращающая
             значение для минимизации.
@@ -89,6 +95,7 @@ class BaseAlgorithm(ABC):
             evaluator if evaluator is not None else SerialEvaluator(problem)
         )
         self.iteration = 0
+        self.nfev = 0
         self.best_solution: npt.NDArray[np.float64] | None = None
         self.best_fitness = float("inf")
 
@@ -111,8 +118,25 @@ class BaseAlgorithm(ABC):
     def _reset_state(self) -> None:
         """Сбрасывает результаты предыдущего запуска."""
         self.iteration = 0
+        self.nfev = 0
         self.best_solution = None
         self.best_fitness = float("inf")
+
+    def _evaluate(
+        self,
+        positions: npt.NDArray[np.float64],
+    ) -> npt.NDArray[np.float64]:
+        """Вычисляет fitness и увеличивает счётчик обращений.
+
+        Args:
+            positions: позиции формы ``(n, dim)``.
+
+        Returns:
+            Значения целевой функции формы ``(n,)``.
+        """
+        values = self.evaluator.evaluate(positions)
+        self.nfev += int(positions.shape[0])
+        return values
 
     def _initial_positions(self) -> npt.NDArray[np.float64]:
         """Генерирует начальную популяцию внутри границ."""

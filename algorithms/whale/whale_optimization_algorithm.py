@@ -28,7 +28,7 @@ class WhaleOptimizationAlgorithm(BaseAlgorithm):
         """Инициализирует популяцию китов."""
         self._reset_state()
         self.whales = self._initial_positions()
-        self.fitness = self.evaluator.evaluate(self.whales)
+        self.fitness = self._evaluate(self.whales)
         self._update_best(self.whales, self.fitness)
         self.iteration = 0
 
@@ -65,6 +65,6 @@ class WhaleOptimizationAlgorithm(BaseAlgorithm):
 
             self.whales[index] = self._clip(new_position)
 
-        self.fitness = self.evaluator.evaluate(self.whales)
+        self.fitness = self._evaluate(self.whales)
         self._update_best(self.whales, self.fitness)
         self.iteration += 1
