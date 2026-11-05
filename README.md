@@ -241,8 +241,28 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 
 Графики сохраняются в `plots/` или в каталог из `--output-dir`.
 `examples.benchmark` печатает среднее лучшее значение, `nfev` и время
-для всех пяти алгоритмов на sphere или rastrigin. Команды примеров
+для всех пяти алгоритмов на задаче из реестра. Команды примеров
 требуют editable-установки пакета: `pip install -e ".[dev,plot]"`.
+
+## Реестр задач
+
+Стандартные функции собраны в `metaheuristics_lib.problems.registry`:
+
+```python
+import metaheuristics_lib as mhl
+
+print(mhl.list_problems())
+
+problem = mhl.get_problem("rastrigin")
+print(problem.function)
+print(problem.dim)
+print(problem.bounds)
+print(problem.optimum)
+```
+
+Для задач с переменной размерностью `dim` равен `None`. Для
+фиксированных двумерных задач задано `optimum_x`. Benchmark принимает
+имена задач из реестра через `--problem`.
 
 ## Тесты и проверки
 

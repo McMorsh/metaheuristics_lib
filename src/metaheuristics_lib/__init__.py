@@ -25,9 +25,13 @@ from metaheuristics_lib.core import (
     normalize_bounds,
 )
 from metaheuristics_lib.problems import (
+    PROBLEMS,
+    ProblemSpec,
     ackley,
+    get_problem,
     griewank,
     himmelblau,
+    list_problems,
     mccormick,
     rastrigin,
     rosenbrock,
@@ -36,6 +40,7 @@ from metaheuristics_lib.problems import (
 )
 
 __all__ = [
+    "PROBLEMS",
     "ArtificialBeeColony",
     "BaseAlgorithm",
     "BoundsLike",
@@ -46,13 +51,16 @@ __all__ = [
     "MPIEvaluator",
     "Objective",
     "OptimizationResult",
+    "ProblemSpec",
     "ProcessPoolEvaluator",
     "Runner",
     "SerialEvaluator",
     "WhaleOptimizationAlgorithm",
     "ackley",
+    "get_problem",
     "griewank",
     "himmelblau",
+    "list_problems",
     "mccormick",
     "normalize_bounds",
     "rastrigin",

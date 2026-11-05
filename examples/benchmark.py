@@ -8,22 +8,17 @@ from dataclasses import dataclass
 from metaheuristics_lib import (
     ArtificialBeeColony,
     BaseAlgorithm,
+    BoundsLike,
     CrowSearchAlgorithm,
     EmperorPenguinOptimizer,
     GreyWolfOptimizer,
     Objective,
     Runner,
     WhaleOptimizationAlgorithm,
-    rastrigin,
-    sphere,
 )
+from metaheuristics_lib.problems.registry import get_problem, list_problems
 
 AlgorithmFactory = Callable[..., BaseAlgorithm]
-
-PROBLEMS: dict[str, tuple[Objective, tuple[float, float]]] = {
-    "sphere": (sphere, (-10.0, 10.0)),
-    "rastrigin": (rastrigin, (-5.12, 5.12)),
-}
 
 ALGORITHMS: list[AlgorithmFactory] = [
     ArtificialBeeColony,
@@ -53,7 +48,7 @@ class BenchmarkRow:
 
 def run_benchmark(
     problem: Objective,
-    bounds: tuple[float, float],
+    bounds: BoundsLike,
     dim: int,
     iterations: int,
     agents: int,
@@ -64,7 +59,7 @@ def run_benchmark(
 
     Args:
         problem: целевая функция.
-        bounds: общие границы поиска.
+        bounds: границы поиска.
         dim: размерность задачи.
         iterations: число итераций каждого запуска.
         agents: размер популяции.
@@ -130,7 +125,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--problem",
-        choices=sorted(PROBLEMS),
+        choices=list_problems(),
         default="rastrigin",
     )
     parser.add_argument("--dim", type=int, default=2)
@@ -140,11 +135,14 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    problem, bounds = PROBLEMS[args.problem]
+    problem = get_problem(args.problem)
+    if problem.dim is not None and args.dim != problem.dim:
+        parser.error(f"Задача {problem.name} определена для dim={problem.dim}")
+    dim = problem.dim if problem.dim is not None else args.dim
     rows = run_benchmark(
-        problem,
-        bounds,
-        args.dim,
+        problem.function,
+        problem.bounds,
+        dim,
         args.iterations,
         args.agents,
         args.runs,
