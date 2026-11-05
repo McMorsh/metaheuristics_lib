@@ -9,8 +9,9 @@
 - Пять алгоритмов: ABC, CSA, GWO, WOA и EPO.
 - Единый интерфейс `BaseAlgorithm` и запуск через `Runner`.
 - Последовательный, процессный и MPI-режимы вычисления функции.
+- Пакетная оценка fitness и счётчик обращений `nfev`.
 - Метрики сходимости, логирование и визуализация.
-- Тесты, Ruff и strict mypy.
+- Тесты, покрытие, Ruff и strict mypy.
 
 ## Структура
 
@@ -91,6 +92,12 @@ print(len(history))
 `result` содержит ключи `minimum_x` и `minimum_value`. История включает
 начальную точку, поэтому её длина равна `max_iter + 1`.
 
+Счётчик `algorithm.nfev` показывает число обращений к целевой функции
+за текущий запуск. Он сбрасывается в `initialize` и учитывает каждую
+позицию пакета, включая повторную оценку уже известной точки. В MPI
+счётчик увеличивается на размер глобального пакета на каждом ранге,
+поэтому он одинаков везде и не требует суммирования по рангам.
+
 Библиотека не настраивает logging при импорте. Чтобы видеть сообщения
 `Runner`, настройте logging в приложении, например
 `logging.basicConfig(level=logging.INFO)`.
@@ -127,7 +134,9 @@ algorithm = WhaleOptimizationAlgorithmMP(
 ```
 
 Целевая функция должна быть определена на верхнем уровне модуля и быть
-picklable. Значение `processes=1` выполняется последовательно.
+picklable. Значение `processes=1` выполняется последовательно. Пакеты
+меньше четырёх позиций тоже считаются в текущем процессе: запуск пула
+для них дороже вычисления.
 
 При необходимости можно явно выбрать контекст multiprocessing:
 
@@ -187,10 +196,13 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 100 --agents 20
 ```bash
 python -m examples.run_serial --iterations 20 --agents 10 --runs 2
 python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
+python -m examples.benchmark --iterations 100 --agents 30 --runs 3
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 ```
 
 Графики сохраняются в `plots/` или в каталог из `--output-dir`.
+`examples.benchmark` печатает среднее лучшее значение, `nfev` и время
+для всех пяти алгоритмов на sphere или rastrigin.
 
 ## Тесты и проверки
 
@@ -200,6 +212,8 @@ ruff format --check .
 mypy .
 pytest -q
 pytest -q -m integration
+pytest -q --cov=core --cov=utils --cov-fail-under=80
+pytest -q --cov=algorithms --cov=problems --cov-fail-under=70
 ```
 
 Интеграционные тесты запускают реальный пул процессов и могут быть

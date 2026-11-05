@@ -24,9 +24,9 @@
 и сообщения исключений пишутся на русском языке. Имена в коде - на
 английском, без транслитерации. Служебные логи - на английском.
 
-Базовый стек: Python 3.12+, `numpy`, `pytest`, `ruff`, `mypy`. `mpi4py`
-подключается как опциональная зависимость. Не используйте синтаксис новее
-минимальной поддерживаемой версии.
+Базовый стек: Python 3.12+, `numpy`, `pytest`, `pytest-cov`, `ruff`,
+`mypy`. `mpi4py` подключается как опциональная зависимость. Не
+используйте синтаксис новее минимальной поддерживаемой версии.
 
 ## Форматирование
 
@@ -379,18 +379,25 @@ def test_sphere_rejects_empty_vector() -> None:
 
 ```toml
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "metaheuristics-lib"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.12"
-dependencies = ["numpy>=1.26"]
+dependencies = ["numpy>=2.1"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10"]
-plot = ["matplotlib>=3.8"]
+dev = [
+    "build>=1.2",
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.9",
+    "mypy>=1.13",
+    "matplotlib>=3.9",
+]
+plot = ["matplotlib>=3.9"]
 mpi = ["mpi4py>=4"]
 
 [tool.setuptools.packages.find]
@@ -461,6 +468,8 @@ ruff check .
 ruff format --check .
 mypy .
 pytest -q
+pytest -q --cov=core --cov=utils --cov-fail-under=80
+pytest -q --cov=algorithms --cov=problems --cov-fail-under=70
 ```
 
 Windows PowerShell:
@@ -474,6 +483,8 @@ ruff check .
 ruff format --check .
 mypy .
 pytest -q
+pytest -q --cov=core --cov=utils --cov-fail-under=80
+pytest -q --cov=algorithms --cov=problems --cov-fail-under=70
 ```
 
 Интеграционные тесты с реальным пулом процессов запускайте отдельно:
@@ -504,8 +515,12 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 2. Запустите `mypy .`.
 3. Запустите `pytest -q`; для изменений в multiprocessing -
    `pytest -q -m integration`.
-4. Запустите затронутый пример или скрипт.
-5. Просмотрите `git diff`: в нём не должно быть отладочного вывода, кэшей,
+4. Для изменений в `core`/`utils` запустите
+   `pytest -q --cov=core --cov=utils --cov-fail-under=80`; для
+   `algorithms`/`problems` - `pytest -q --cov=algorithms
+   --cov=problems --cov-fail-under=70`.
+5. Запустите затронутый пример или скрипт.
+6. Просмотрите `git diff`: в нём не должно быть отладочного вывода, кэшей,
    графиков, секретов и случайных переименований.
 
 Массовый реформат и изменение поведения - отдельные коммиты, не смешивайте
@@ -532,14 +547,18 @@ mypy; serial и multiprocessing режимы проверены. Вариант�
 сведены к обёрткам над общим алгоритмом и `Evaluator`; глобальный
 `np.random.seed` и жёсткие пути в примерах удалены. Широкий
 `except Exception` остался только в `MPIEvaluator`, чтобы разослать
-ошибку всем рангам и не допустить зависания.
+ошибку всем рангам и не допустить зависания. ABC и EPO переведены
+на пакетную оценку, GWO избавлен от двойного цикла, добавлены `nfev`,
+benchmark, тесты сходимости и пороги покрытия; шаги покрытия и
+сборки wheel добавлены в CI.
 
 Осталось:
 
 1. Прогнать MPI-пример и интеграционный тест на машине с `mpi4py` и MPI.
-2. Проверить GitHub Actions workflow на Python 3.12+.
-3. Добавить автоматический packaging-smoke-тест с установкой wheel.
-4. Расширять покрытие тестами по мере роста функциональности.
+2. Проверить GitHub Actions: job `tests` на Python 3.12-3.14, jobs
+   `package` и `mpi` на Python 3.12.
+3. Поддерживать пороги покрытия: 80% для `core`/`utils` и 70% для
+   `algorithms`/`problems`.
 
 Правила приоритетнее стиля соседнего legacy-кода: новый код пишите по правилам,
 даже если рядом остаются старые отступления. Массовый реформат и изменение
@@ -556,5 +575,7 @@ mypy; serial и multiprocessing режимы проверены. Вариант�
 - Не используйте длинные тире, эмодзи и шаблонные фразы.
 - Запускайте полный прогон `ruff check`, `ruff format --check`, `mypy .`
   и `pytest -q`; для изменений в multiprocessing - `pytest -q -m integration`.
+  Для изменений в `core`/`utils` и `algorithms`/`problems` проверяйте
+  покрытие командами из раздела "Сборка и проверка".
 - Проверьте, что примеры и параллельные варианты запускаются.
 - Если требование неоднозначно, задайте вопрос до правки.
