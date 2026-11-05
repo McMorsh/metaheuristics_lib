@@ -2,11 +2,8 @@
 
 import argparse
 
-from algorithms.whale.whale_optimization_algorithm_mpi import (
-    WhaleOptimizationAlgorithmMPI,
-)
-from core.runner import Runner
-from problems.continuous import sphere
+from metaheuristics_lib import Runner, sphere
+from metaheuristics_lib.algorithms import WhaleOptimizationAlgorithmMPI
 
 
 def main() -> None:

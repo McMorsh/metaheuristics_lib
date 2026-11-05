@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from problems.continuous import sphere
-from utils.algorithm_utils import (
+from metaheuristics_lib.problems.continuous import sphere
+from metaheuristics_lib.utils.algorithm_utils import (
     enforce_boundaries,
     enforce_boundaries_csa,
     evaluate_fitness_serial,

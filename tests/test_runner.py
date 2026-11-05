@@ -7,13 +7,13 @@ import numpy as np
 import numpy.typing as npt
 import pytest
 
-from algorithms.whale.whale_optimization_algorithm import (
+from metaheuristics_lib.algorithms.whale.whale_optimization_algorithm import (
     WhaleOptimizationAlgorithm,
 )
-from core.algorithm import BaseAlgorithm
-from core.runner import Runner
-from core.types import OptimizationResult
-from problems.continuous import sphere
+from metaheuristics_lib.core.algorithm import BaseAlgorithm
+from metaheuristics_lib.core.runner import Runner
+from metaheuristics_lib.core.types import OptimizationResult
+from metaheuristics_lib.problems.continuous import sphere
 
 
 class BrokenAlgorithm(BaseAlgorithm):
@@ -401,7 +401,7 @@ def test_runner_closes_algorithm_on_error() -> None:
 
 
 def test_runner_import_does_not_configure_logging() -> None:
-    import core.runner as runner_module
+    import metaheuristics_lib.core.runner as runner_module
 
     runner_logger = logging.getLogger(runner_module.__name__)
     assert runner_logger.handlers == []

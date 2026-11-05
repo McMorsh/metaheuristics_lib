@@ -7,33 +7,23 @@ from typing import Any
 import numpy as np
 import pytest
 
-from algorithms._common import resolve_processes
-from algorithms.bee_colony.artificial_bee_colony import ArtificialBeeColony
-from algorithms.bee_colony.artificial_bee_colony_mp import (
+from metaheuristics_lib.algorithms import (
+    ArtificialBeeColony,
     ArtificialBeeColonyMP,
-)
-from algorithms.crow_search.crow_search_algorithm import CrowSearchAlgorithm
-from algorithms.crow_search.crow_search_algorithm_mp import (
+    CrowSearchAlgorithm,
     CrowSearchAlgorithmMP,
-)
-from algorithms.emperor_penguin.emperor_penguin_optimizer import (
     EmperorPenguinOptimizer,
-)
-from algorithms.emperor_penguin.emperor_penguin_optimizer_mp import (
     EmperorPenguinOptimizerMP,
-)
-from algorithms.grey_wolf.grey_wolf_optimizer import GreyWolfOptimizer
-from algorithms.grey_wolf.grey_wolf_optimizer_mp import GreyWolfOptimizerMP
-from algorithms.whale.whale_optimization_algorithm import (
+    GreyWolfOptimizer,
+    GreyWolfOptimizerMP,
     WhaleOptimizationAlgorithm,
-)
-from algorithms.whale.whale_optimization_algorithm_mp import (
     WhaleOptimizationAlgorithmMP,
 )
-from core.algorithm import BaseAlgorithm
-from core.runner import Runner
-from core.types import OptimizationResult
-from problems.continuous import sphere
+from metaheuristics_lib.algorithms._common import resolve_processes
+from metaheuristics_lib.core.algorithm import BaseAlgorithm
+from metaheuristics_lib.core.runner import Runner
+from metaheuristics_lib.core.types import OptimizationResult
+from metaheuristics_lib.problems.continuous import sphere
 
 AlgorithmFactory = Callable[..., BaseAlgorithm]
 

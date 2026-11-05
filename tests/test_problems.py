@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 import pytest
 
-from problems.continuous import (
+from metaheuristics_lib.problems.continuous import (
     ackley,
     griewank,
     himmelblau,

@@ -3,22 +3,20 @@
 import argparse
 from pathlib import Path
 
-from algorithms.crow_search.crow_search_algorithm import (
+from metaheuristics_lib import (
     CrowSearchAlgorithm,
-)
-from algorithms.whale.whale_optimization_algorithm import (
+    Runner,
     WhaleOptimizationAlgorithm,
+    rastrigin,
 )
-from core.runner import Runner
-from problems.continuous import rastrigin
-from utils.metrics import (
+from metaheuristics_lib.utils.metrics import (
     area_under_curve,
     best_so_far,
     run_multiple,
     summarize_runs,
     time_to_target,
 )
-from utils.plot import plot_convergence
+from metaheuristics_lib.utils.plot import plot_convergence
 
 
 def test_alg(

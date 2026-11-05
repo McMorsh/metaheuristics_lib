@@ -22,8 +22,8 @@ jobs:
       - run: ruff format --check .
       - run: mypy .
       - run: pytest -q
-      - run: pytest -q --cov=core --cov=utils --cov-report=term-missing --cov-fail-under=80
-      - run: pytest -q --cov=algorithms --cov=problems --cov-report=term-missing --cov-fail-under=70
+      - run: pytest -q --cov=src/metaheuristics_lib/core --cov=src/metaheuristics_lib/utils --cov-report=term-missing --cov-fail-under=80
+      - run: pytest -q --cov=src/metaheuristics_lib/algorithms --cov=src/metaheuristics_lib/problems --cov-report=term-missing --cov-fail-under=70
       - run: pytest -q -m integration
 
   package:
@@ -39,7 +39,7 @@ jobs:
       - run: python -m venv /tmp/wheel-venv
       - run: /tmp/wheel-venv/bin/pip install --upgrade pip
       - run: /tmp/wheel-venv/bin/pip install dist/*.whl
-      - run: /tmp/wheel-venv/bin/python -c "import algorithms, core, problems, utils, metaheuristics_lib; print(metaheuristics_lib.__file__)"
+      - run: /tmp/wheel-venv/bin/python -c "import importlib.util, metaheuristics_lib; from metaheuristics_lib import algorithms, core, problems, utils; assert importlib.util.find_spec('core') is None; print(metaheuristics_lib.__file__)"
         working-directory: /tmp
 
   mpi:

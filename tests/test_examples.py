@@ -8,7 +8,7 @@ import pytest
 from examples import benchmark as benchmark_example
 from examples import run_mp as parallel_example
 from examples import run_serial as serial_example
-from problems.continuous import sphere
+from metaheuristics_lib.problems.continuous import sphere
 
 
 def test_serial_example_writes_plots(tmp_path: Path) -> None:

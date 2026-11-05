@@ -8,14 +8,14 @@ from typing import Any
 import numpy as np
 import pytest
 
-import core.evaluator as evaluator_module
-from core.evaluator import (
+import metaheuristics_lib.core.evaluator as evaluator_module
+from metaheuristics_lib.core.evaluator import (
     MPIEvaluator,
     ProcessPoolEvaluator,
     SerialEvaluator,
 )
-from problems.continuous import sphere
-from utils.mp_utils import mp_evaluate_fitness
+from metaheuristics_lib.problems.continuous import sphere
+from metaheuristics_lib.utils.mp_utils import mp_evaluate_fitness
 
 POSITIONS = np.array(
     [
@@ -237,5 +237,5 @@ def test_mpi_evaluator_reports_missing_dependency() -> None:
 
 
 def test_mpi_utils_import_is_lazy() -> None:
-    module = importlib.import_module("utils.mpi_utils")
+    module = importlib.import_module("metaheuristics_lib.utils.mpi_utils")
     assert module is not None

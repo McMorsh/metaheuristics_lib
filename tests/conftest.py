@@ -30,4 +30,6 @@ def pytest_configure() -> None:
     import matplotlib
 
     matplotlib.use("Agg")
-    logging.getLogger("core.runner").setLevel(logging.WARNING)
+    logging.getLogger("metaheuristics_lib.core.runner").setLevel(
+        logging.WARNING
+    )

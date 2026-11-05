@@ -4,22 +4,16 @@ from collections.abc import Callable
 
 import pytest
 
-from algorithms.bee_colony.artificial_bee_colony import (
+from metaheuristics_lib.algorithms import (
     ArtificialBeeColony,
-)
-from algorithms.crow_search.crow_search_algorithm import (
     CrowSearchAlgorithm,
-)
-from algorithms.emperor_penguin.emperor_penguin_optimizer import (
     EmperorPenguinOptimizer,
-)
-from algorithms.grey_wolf.grey_wolf_optimizer import GreyWolfOptimizer
-from algorithms.whale.whale_optimization_algorithm import (
+    GreyWolfOptimizer,
     WhaleOptimizationAlgorithm,
 )
-from core.algorithm import BaseAlgorithm
-from core.runner import Runner
-from problems.continuous import sphere
+from metaheuristics_lib.core.algorithm import BaseAlgorithm
+from metaheuristics_lib.core.runner import Runner
+from metaheuristics_lib.problems.continuous import sphere
 
 AlgorithmFactory = Callable[..., BaseAlgorithm]
 

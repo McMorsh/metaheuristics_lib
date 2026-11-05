@@ -6,12 +6,9 @@ import sys
 from multiprocessing.context import BaseContext
 from pathlib import Path
 
-from algorithms.whale.whale_optimization_algorithm_mp import (
-    WhaleOptimizationAlgorithmMP,
-)
-from core.runner import Runner
-from problems.continuous import sphere
-from utils.plot import plot_speedup_different_pools
+from metaheuristics_lib import Runner, sphere
+from metaheuristics_lib.algorithms import WhaleOptimizationAlgorithmMP
+from metaheuristics_lib.utils.plot import plot_speedup_different_pools
 
 
 def _process_context() -> BaseContext | None:

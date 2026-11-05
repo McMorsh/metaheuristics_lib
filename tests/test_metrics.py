@@ -3,12 +3,12 @@
 import numpy as np
 import pytest
 
-from algorithms.whale.whale_optimization_algorithm import (
+from metaheuristics_lib.algorithms.whale.whale_optimization_algorithm import (
     WhaleOptimizationAlgorithm,
 )
-from core.runner import Runner
-from problems.continuous import sphere
-from utils.metrics import (
+from metaheuristics_lib.core.runner import Runner
+from metaheuristics_lib.problems.continuous import sphere
+from metaheuristics_lib.utils.metrics import (
     MultipleRunResults,
     area_under_curve,
     best_so_far,

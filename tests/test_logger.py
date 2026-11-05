@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from utils.logger import (
+from metaheuristics_lib.utils.logger import (
     CONSOLE_HANDLER_NAME,
     FILE_HANDLER_NAME,
     get_logger,

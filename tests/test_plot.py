@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from problems.continuous import sphere
-from utils.plot import (
+from metaheuristics_lib.problems.continuous import sphere
+from metaheuristics_lib.utils.plot import (
     plot_builder,
     plot_convergence,
     plot_execution_time_comparison,

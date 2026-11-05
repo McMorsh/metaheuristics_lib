@@ -5,23 +5,18 @@ import statistics
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from algorithms.bee_colony.artificial_bee_colony import (
+from metaheuristics_lib import (
     ArtificialBeeColony,
-)
-from algorithms.crow_search.crow_search_algorithm import (
+    BaseAlgorithm,
     CrowSearchAlgorithm,
-)
-from algorithms.emperor_penguin.emperor_penguin_optimizer import (
     EmperorPenguinOptimizer,
-)
-from algorithms.grey_wolf.grey_wolf_optimizer import GreyWolfOptimizer
-from algorithms.whale.whale_optimization_algorithm import (
+    GreyWolfOptimizer,
+    Objective,
+    Runner,
     WhaleOptimizationAlgorithm,
+    rastrigin,
+    sphere,
 )
-from core.algorithm import BaseAlgorithm
-from core.runner import Runner
-from core.types import Objective
-from problems.continuous import rastrigin, sphere
 
 AlgorithmFactory = Callable[..., BaseAlgorithm]
 

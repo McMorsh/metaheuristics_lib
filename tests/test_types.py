@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from core.types import normalize_bounds
+from metaheuristics_lib.core.types import normalize_bounds
 
 
 def test_common_interval_is_tiled() -> None:
