@@ -11,6 +11,9 @@ import numpy.typing as npt
 
 from core.types import Objective
 
+MIN_PARALLEL_POSITIONS = 4
+"""Минимальный пакет, для которого создаётся пул процессов."""
+
 
 class Evaluator(Protocol):
     """Интерфейс вычислителя целевой функции."""
@@ -38,6 +41,17 @@ def _as_positions(
     return array
 
 
+def _evaluate_inline(
+    objective: Objective,
+    positions: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
+    """Вычисляет значения функции в текущем процессе."""
+    return np.asarray(
+        [objective(position) for position in positions],
+        dtype=np.float64,
+    )
+
+
 class SerialEvaluator:
     """Последовательный вычислитель."""
 
@@ -49,11 +63,7 @@ class SerialEvaluator:
         positions: npt.NDArray[np.float64],
     ) -> npt.NDArray[np.float64]:
         """Вычисляет значения функции в одном процессе."""
-        array = _as_positions(positions)
-        return np.asarray(
-            [self._objective(position) for position in array],
-            dtype=np.float64,
-        )
+        return _evaluate_inline(self._objective, _as_positions(positions))
 
     def close(self) -> None:
         """Освобождает ресурсы; для последовательного режима нечего делать."""
@@ -74,7 +84,8 @@ class ProcessPoolEvaluator:
     """Вычислитель на пуле процессов.
 
     Пул создаётся лениво при первом вызове и переиспользуется до
-    :meth:`close`.
+    :meth:`close`. Пакеты меньше ``MIN_PARALLEL_POSITIONS`` считаются
+    последовательно: накладные расходы на процессы больше выигрыша.
 
     Args:
         objective: целевая функция.
@@ -116,13 +127,12 @@ class ProcessPoolEvaluator:
         if array.size == 0:
             return np.empty(0, dtype=np.float64)
 
+        if array.shape[0] < MIN_PARALLEL_POSITIONS:
+            return _evaluate_inline(self._objective, array)
+
         workers = self._max_workers or os.cpu_count() or 1
         if workers == 1:
-            return np.asarray(
-                [self._objective(position) for position in array],
-                dtype=np.float64,
-            )
-
+            return _evaluate_inline(self._objective, array)
         executor = self._get_executor()
         chunksize = self._chunksize or max(1, len(array) // (workers * 4))
         objective = self._objective
