@@ -14,6 +14,8 @@ from metaheuristics_lib.utils.metrics import (
     best_so_far,
     mean_best,
     run_multiple,
+    run_repeated,
+    summarize_run,
     summarize_runs,
     time_to_target,
 )
@@ -125,7 +127,7 @@ def test_mean_best_rejects_empty_history() -> None:
         mean_best([[]])
 
 
-def test_run_multiple_returns_expected_structure() -> None:
+def test_run_repeated_returns_expected_structure() -> None:
     algorithm = WhaleOptimizationAlgorithm(
         sphere,
         2,
@@ -135,10 +137,8 @@ def test_run_multiple_returns_expected_structure() -> None:
         seed=42,
     )
     with Runner(algorithm, iteration_info=False) as runner:
-        results = run_multiple(runner, runs=2, seed=42)
+        result = run_repeated(runner, runs=2, seed=42)
 
-    assert len(results) == 1
-    result = results[0]
     assert len(result["best_fitness"]) == 2
     assert len(result["history_of_best_fitness"]) == 2
     assert len(result["best_x"]) == 2
@@ -151,36 +151,35 @@ def test_run_multiple_returns_expected_structure() -> None:
     )
 
 
-def test_run_multiple_uses_seed_sequence() -> None:
+def test_run_repeated_uses_seed_sequence() -> None:
     with Runner(
         _make_algorithm(42),
         iteration_info=False,
     ) as runner:
-        results = run_multiple(runner, runs=2)
+        result = run_repeated(runner, runs=2)
 
     first_value, first_history = _run_once(42)
     second_value, second_history = _run_once(43)
 
-    result = results[0]
     assert first_history != second_history
     assert result["history_of_best_fitness"][0] == first_history
     assert result["history_of_best_fitness"][1] == second_history
     assert result["best_fitness"] == pytest.approx([first_value, second_value])
 
 
-def test_run_multiple_restores_seed_state() -> None:
+def test_run_repeated_restores_seed_state() -> None:
     with Runner(
         _make_algorithm(42),
         iteration_info=False,
     ) as runner:
         original_runner_seed = runner.seed
-        run_multiple(runner, runs=2)
+        run_repeated(runner, runs=2)
 
         assert runner.seed == original_runner_seed
         assert runner.algorithm.seed == 42
 
 
-def test_run_multiple_rejects_zero_runs() -> None:
+def test_run_repeated_rejects_zero_runs() -> None:
     algorithm = WhaleOptimizationAlgorithm(
         sphere,
         2,
@@ -193,10 +192,46 @@ def test_run_multiple_rejects_zero_runs() -> None:
         Runner(algorithm, iteration_info=False) as runner,
         pytest.raises(ValueError, match="runs"),
     ):
+        run_repeated(runner, runs=0)
+
+
+def test_run_multiple_is_deprecated() -> None:
+    algorithm = WhaleOptimizationAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=8,
+        max_iter=3,
+        seed=42,
+    )
+    with (
+        Runner(algorithm, iteration_info=False) as runner,
+        pytest.warns(DeprecationWarning, match="run_multiple"),
+    ):
+        results = run_multiple(runner, runs=1, seed=42)
+
+    assert len(results) == 1
+    assert len(results[0]["best_fitness"]) == 1
+
+
+def test_run_multiple_still_rejects_zero_runs() -> None:
+    algorithm = WhaleOptimizationAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=8,
+        max_iter=3,
+        seed=42,
+    )
+    with (
+        Runner(algorithm, iteration_info=False) as runner,
+        pytest.warns(DeprecationWarning, match="run_multiple"),
+        pytest.raises(ValueError, match="runs"),
+    ):
         run_multiple(runner, runs=0)
 
 
-def test_summarize_runs_returns_statistics() -> None:
+def test_summarize_run_returns_statistics() -> None:
     algorithm = WhaleOptimizationAlgorithm(
         sphere,
         2,
@@ -206,15 +241,37 @@ def test_summarize_runs_returns_statistics() -> None:
         seed=42,
     )
     with Runner(algorithm, iteration_info=False) as runner:
+        result = run_repeated(runner, runs=2, seed=42)
+
+    summary = summarize_run(result, target=0.0)
+    assert set(summary) == {
+        "mean_final",
+        "std_final",
+        "mean_auc",
+        "std_auc",
+        "time",
+        "mean_time_to_target",
+        "success_rate",
+    }
+
+
+def test_summarize_runs_accepts_legacy_list() -> None:
+    algorithm = WhaleOptimizationAlgorithm(
+        sphere,
+        2,
+        (-5.0, 5.0),
+        agents=8,
+        max_iter=3,
+        seed=42,
+    )
+    with (
+        Runner(algorithm, iteration_info=False) as runner,
+        pytest.warns(DeprecationWarning, match="run_multiple"),
+    ):
         results = run_multiple(runner, runs=2, seed=42)
 
     summary = summarize_runs(results, target=0.0)
     assert "mean_final" in summary
-    assert "std_final" in summary
-    assert "mean_auc" in summary
-    assert "std_auc" in summary
-    assert "time" in summary
-    assert "success_rate" in summary
 
 
 def test_summarize_runs_rejects_empty_results() -> None:

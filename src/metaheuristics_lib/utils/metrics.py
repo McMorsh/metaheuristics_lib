@@ -1,5 +1,6 @@
 """Метрики сходимости и статистика запусков."""
 
+import warnings
 from collections.abc import Sequence
 from typing import TypedDict
 
@@ -124,11 +125,11 @@ def mean_best(history_list: HistoryList) -> float:
     return float(np.mean(finals))
 
 
-def run_multiple(
+def run_repeated(
     runner: Runner,
     runs: int = 30,
     seed: int | None = None,
-) -> list[MultipleRunResults]:
+) -> MultipleRunResults:
     """Выполняет несколько запусков алгоритма.
 
     Args:
@@ -140,8 +141,7 @@ def run_multiple(
             параметр не задан, используется seed раннера или алгоритма.
 
     Returns:
-        Список из одного словаря с массивами результатов. Формат
-        сохранён для совместимости с существующими примерами.
+        Словарь с массивами результатов по запускам.
 
     Raises:
         ValueError: если ``runs < 1``.
@@ -181,15 +181,42 @@ def run_multiple(
         runner.seed = original_runner_seed
         runner.algorithm.set_seed(original_algorithm_seed)
 
-    return [
-        MultipleRunResults(
-            best_fitness=best_fitness,
-            history_of_best_fitness=history_of_best_fitness,
-            best_x=best_x,
-            history_of_best_x=history_of_best_x,
-            time=elapsed,
-        )
-    ]
+    return MultipleRunResults(
+        best_fitness=best_fitness,
+        history_of_best_fitness=history_of_best_fitness,
+        best_x=best_x,
+        history_of_best_x=history_of_best_x,
+        time=elapsed,
+    )
+
+
+def run_multiple(
+    runner: Runner,
+    runs: int = 30,
+    seed: int | None = None,
+) -> list[MultipleRunResults]:
+    """Устаревшая обёртка над :func:`run_repeated`.
+
+    Возвращает список из одного словаря для совместимости со старым
+    форматом. Новый код должен использовать :func:`run_repeated`.
+
+    Args:
+        runner: обёртка запуска.
+        runs: число запусков, не меньше 1.
+        seed: базовый seed.
+
+    Returns:
+        Список из одного словаря с результатами.
+
+    Raises:
+        ValueError: если ``runs < 1``.
+    """
+    warnings.warn(
+        "run_multiple устарела; используйте run_repeated",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return [run_repeated(runner, runs, seed)]
 
 
 def summarize_runs(
@@ -199,7 +226,7 @@ def summarize_runs(
     """Собирает статистику по результатам запусков.
 
     Args:
-        results: результаты :func:`run_multiple`.
+        results: список результатов :func:`run_repeated`.
         target: целевое значение для ``time_to_target``.
 
     Returns:
@@ -235,3 +262,20 @@ def summarize_runs(
         summary["success_rate"] = len(valid_times) / len(times)
 
     return summary
+
+
+def summarize_run(
+    result: MultipleRunResults,
+    target: float | None = None,
+) -> dict[str, float | None]:
+    """Собирает статистику по результату :func:`run_repeated`.
+
+    Args:
+        result: словарь с результатами запусков.
+        target: целевое значение для ``time_to_target``.
+
+    Returns:
+        Словарь со средними значениями, стандартными отклонениями и
+        долей успешных запусков.
+    """
+    return summarize_runs([result], target=target)

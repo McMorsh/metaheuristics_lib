@@ -134,6 +134,22 @@ algorithm = mhl.WhaleOptimizationAlgorithm(
 `Runner`, настройте logging в приложении, например
 `logging.basicConfig(level=logging.INFO)`.
 
+## Метрики нескольких запусков
+
+```python
+import metaheuristics_lib as mhl
+from metaheuristics_lib.utils.metrics import run_repeated, summarize_run
+
+with mhl.Runner(algorithm, iteration_info=False) as runner:
+    result = run_repeated(runner, runs=10, seed=42)
+
+print(summarize_run(result, target=0.0))
+```
+
+`run_repeated` возвращает один словарь с результатами всех запусков.
+Устаревшая `run_multiple` возвращает список из одного такого словаря
+и выдаёт `DeprecationWarning`.
+
 ## Границы поиска
 
 Поддерживаются:

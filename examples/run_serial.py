@@ -12,8 +12,8 @@ from metaheuristics_lib import (
 from metaheuristics_lib.utils.metrics import (
     area_under_curve,
     best_so_far,
-    run_multiple,
-    summarize_runs,
+    run_repeated,
+    summarize_run,
     time_to_target,
 )
 from metaheuristics_lib.utils.plot import plot_convergence
@@ -73,13 +73,13 @@ def multi_run_test(
     )
 
     with Runner(algorithm, iteration_info=False) as runner:
-        results = run_multiple(runner, runs, seed=42)
+        result = run_repeated(runner, runs, seed=42)
 
     print(f"Статистика по {runs} запускам:")
-    print(summarize_runs(results, target=0.0))
+    print(summarize_run(result, target=0.0))
 
     plot_convergence(
-        results[0]["history_of_best_fitness"],
+        result["history_of_best_fitness"],
         labels=[f"Запуск {index + 1}" for index in range(runs)],
         title="Сходимость WOA",
         save_path=output_dir / "woa_runs.png",
