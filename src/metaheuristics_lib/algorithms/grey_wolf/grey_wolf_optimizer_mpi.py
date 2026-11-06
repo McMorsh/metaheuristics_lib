@@ -46,6 +46,3 @@ class GreyWolfOptimizerMPI(_GreyWolfOptimizer):
             evaluator=evaluator,
             **params,
         )
-
-
-GreyWolfOptimizer = GreyWolfOptimizerMPI
