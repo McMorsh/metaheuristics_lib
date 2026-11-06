@@ -30,6 +30,10 @@ class CrowSearchAlgorithm(BaseAlgorithm):
         memory_fitness: лучшие значения функции каждой вороны.
     """
 
+    ALLOWED_PARAMS = frozenset(
+        {"awareness_prob", "expand_rate", "flight_length"},
+    )
+
     def initialize(self) -> None:
         """Инициализирует популяцию и память ворон.
 

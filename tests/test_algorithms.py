@@ -263,3 +263,19 @@ def test_algorithm_rejects_non_callable_problem() -> None:
             2,
             BOUNDS,
         )
+
+
+def test_algorithm_rejects_unknown_parameter() -> None:
+    with pytest.raises(TypeError, match="Неизвестные параметры"):
+        WhaleOptimizationAlgorithm(sphere, 2, BOUNDS, typo=1)
+
+
+def test_mp_wrapper_rejects_unknown_parameter() -> None:
+    with pytest.raises(TypeError, match="typo"):
+        WhaleOptimizationAlgorithmMP(
+            sphere,
+            2,
+            BOUNDS,
+            processes=1,
+            typo=1,
+        )

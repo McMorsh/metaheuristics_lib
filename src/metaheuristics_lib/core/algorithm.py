@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from numbers import Real
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -33,6 +33,9 @@ class BaseAlgorithm(ABC):
     считается отдельным обращением, даже если алгоритм повторно
     оценивает уже известную точку.
 
+    Атрибут ``ALLOWED_PARAMS`` задаёт допустимые ключи ``**params``.
+    Неизвестный ключ считается опечаткой и вызывает ``TypeError``.
+
     Args:
         problem: целевая функция, принимающая вектор и возвращающая
             значение для минимизации.
@@ -51,6 +54,8 @@ class BaseAlgorithm(ABC):
             последовательный.
         **params: дополнительные параметры конкретного алгоритма.
     """
+
+    ALLOWED_PARAMS: ClassVar[frozenset[str]] = frozenset()
 
     def __init__(
         self,
@@ -116,6 +121,14 @@ class BaseAlgorithm(ABC):
                     "Параметр target должен быть конечным числом, "
                     f"получено {target}"
                 )
+
+        unknown = sorted(set(params) - self.ALLOWED_PARAMS)
+        if unknown:
+            names = ", ".join(unknown)
+            raise TypeError(
+                "Неизвестные параметры алгоритма "
+                f"{type(self).__name__}: {names}"
+            )
 
         self.problem = problem
         self.dim = int(dim)

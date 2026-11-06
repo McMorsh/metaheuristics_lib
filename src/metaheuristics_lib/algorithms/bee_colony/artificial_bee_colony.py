@@ -29,6 +29,8 @@ class ArtificialBeeColony(BaseAlgorithm):
         trial: счётчики безуспешных попыток.
     """
 
+    ALLOWED_PARAMS = frozenset({"limit"})
+
     def initialize(self) -> None:
         """Инициализирует популяцию и память пчёл.
 
