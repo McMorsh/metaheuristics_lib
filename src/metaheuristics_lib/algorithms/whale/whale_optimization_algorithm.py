@@ -8,8 +8,8 @@ from metaheuristics_lib.core.algorithm import BaseAlgorithm
 class WhaleOptimizationAlgorithm(BaseAlgorithm):
     """Метаэвристический алгоритм Whale Optimization Algorithm.
 
-    Алгоритм моделирует охоту горбатых китов: обволакивание жертвы,
-    спиральное движение и исследование пространства.
+    Алгоритм моделирует охоту горбатых китов: обволакивание жертвы
+    и спиральное движение.
 
     Args:
         problem: целевая функция.
@@ -33,7 +33,12 @@ class WhaleOptimizationAlgorithm(BaseAlgorithm):
         self.iteration = 0
 
     def iterate(self) -> None:
-        """Выполняет одну итерацию WOA."""
+        """Выполняет одну итерацию WOA.
+
+        Используется исходная логика без отдельной исследовательской
+        ветви: при ``p < 0.5`` кит движется к лучшему решению, иначе
+        выполняет спиральное движение.
+        """
         a = 2.0 - 2.0 * self.iteration / self.max_iter
         best = self._best_position()
 
@@ -43,18 +48,8 @@ class WhaleOptimizationAlgorithm(BaseAlgorithm):
             probability = self.rng.random()
 
             if probability < 0.5:
-                if abs(coefficient_a) < 1.0:
-                    distance = np.abs(
-                        coefficient_c * best - self.whales[index]
-                    )
-                    new_position = best - coefficient_a * distance
-                else:
-                    random_index = int(self.rng.integers(0, self.agents))
-                    random_whale = self.whales[random_index]
-                    distance = np.abs(
-                        coefficient_c * random_whale - self.whales[index]
-                    )
-                    new_position = random_whale - coefficient_a * distance
+                distance = np.abs(coefficient_c * best - self.whales[index])
+                new_position = best - coefficient_a * distance
             else:
                 distance = np.abs(best - self.whales[index])
                 spiral = self.rng.uniform(-1.0, 1.0)

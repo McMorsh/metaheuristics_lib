@@ -183,6 +183,69 @@ def test_csa_rejects_invalid_awareness() -> None:
         algorithm.initialize()
 
 
+def test_csa_uses_original_flight_length_default() -> None:
+    algorithm = CrowSearchAlgorithm(
+        sphere,
+        2,
+        BOUNDS,
+        agents=4,
+        max_iter=1,
+        seed=42,
+    )
+    with Runner(algorithm, iteration_info=False) as runner:
+        runner.run()
+
+    assert algorithm.fly_len == pytest.approx(1.0)
+
+
+def test_csa_accepts_expand_rate() -> None:
+    algorithm = CrowSearchAlgorithm(
+        sphere,
+        2,
+        BOUNDS,
+        agents=4,
+        max_iter=1,
+        seed=42,
+        expand_rate=1.5,
+    )
+    with Runner(algorithm, iteration_info=False) as runner:
+        runner.run()
+
+    assert algorithm.expand_rate == pytest.approx(1.5)
+
+
+def test_csa_rejects_invalid_expand_rate() -> None:
+    algorithm = CrowSearchAlgorithm(
+        sphere,
+        2,
+        BOUNDS,
+        agents=4,
+        max_iter=1,
+        seed=42,
+        expand_rate=0.9,
+    )
+    with pytest.raises(ValueError, match="expand_rate"):
+        algorithm.initialize()
+
+
+def test_csa_expands_bounds_when_position_leaves_range() -> None:
+    initial = np.array([[-1.0, 1.0], [-1.0, 1.0]])
+    algorithm = CrowSearchAlgorithm(
+        sphere,
+        2,
+        (-1.0, 1.0),
+        agents=4,
+        max_iter=1,
+        seed=42,
+        flight_length=1000.0,
+        awareness_prob=0.0,
+    )
+    with Runner(algorithm, iteration_info=False) as runner:
+        runner.run()
+
+    assert not np.array_equal(algorithm.bounds, initial)
+
+
 def test_get_result_requires_initialization() -> None:
     algorithm = WhaleOptimizationAlgorithm(
         sphere,
@@ -195,21 +258,6 @@ def test_get_result_requires_initialization() -> None:
 
     with pytest.raises(RuntimeError, match="не инициализирован"):
         algorithm.get_result()
-
-
-def test_csa_warns_about_deprecated_expand_rate() -> None:
-    algorithm = CrowSearchAlgorithm(
-        sphere,
-        2,
-        BOUNDS,
-        agents=4,
-        max_iter=1,
-        seed=42,
-        expand_rate=1.2,
-    )
-
-    with pytest.warns(DeprecationWarning, match="expand_rate"):
-        algorithm.initialize()
 
 
 def test_algorithm_rejects_invalid_dim() -> None:
