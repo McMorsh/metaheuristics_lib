@@ -1,7 +1,9 @@
 """Сравнение алгоритмов по качеству, времени и числу обращений."""
 
 import argparse
+import logging
 import statistics
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -38,12 +40,37 @@ class BenchmarkRow:
         best: среднее лучшее значение функции по запускам.
         nfev: среднее число обращений к функции за запуск.
         elapsed: среднее время запуска в секундах.
+        stop_reason: распределение причин остановки по запускам или
+            ``None``, если все запуски дошли до ``max_iter``.
     """
 
     name: str
     best: float
     nfev: int
     elapsed: float
+    stop_reason: str | None = None
+
+
+def _summarize_stop_reasons(
+    reasons: list[str | None],
+) -> str | None:
+    """Сводит причины остановки запусков в одну строку.
+
+    Args:
+        reasons: причины остановки по запускам.
+
+    Returns:
+        Распределение причин по убыванию частоты в виде
+        ``"target 2/3, max_fev 1/3"`` или ``None``, если ранней
+        остановки не было.
+    """
+    counts = Counter(reason for reason in reasons if reason is not None)
+    if not counts:
+        return None
+
+    total = len(reasons)
+    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    return ", ".join(f"{reason} {count}/{total}" for reason, count in ordered)
 
 
 def run_benchmark(
@@ -54,6 +81,10 @@ def run_benchmark(
     agents: int,
     runs: int,
     seed: int,
+    *,
+    max_fev: int | None = None,
+    target: float | None = None,
+    iteration_info: bool | int = False,
 ) -> list[BenchmarkRow]:
     """Запускает все алгоритмы и собирает средние показатели.
 
@@ -65,6 +96,9 @@ def run_benchmark(
         agents: размер популяции.
         runs: число запусков на алгоритм.
         seed: базовый seed; запуск ``i`` получает ``seed + i``.
+        max_fev: мягкий лимит обращений к целевой функции.
+        target: целевое значение fitness для ранней остановки.
+        iteration_info: настройка логов итераций для :class:`Runner`.
 
     Returns:
         Строки результатов в порядке :data:`ALGORITHMS`.
@@ -82,6 +116,7 @@ def run_benchmark(
         values: list[float] = []
         counts: list[int] = []
         times: list[float] = []
+        reasons: list[str | None] = []
         for run in range(runs):
             algorithm = factory(
                 problem,
@@ -90,12 +125,18 @@ def run_benchmark(
                 agents=agents,
                 max_iter=iterations,
                 seed=seed + run,
+                max_fev=max_fev,
+                target=target,
             )
-            with Runner(algorithm, iteration_info=False) as runner:
+            with Runner(
+                algorithm,
+                iteration_info=iteration_info,
+            ) as runner:
                 result, _, _, elapsed = runner.run()
             values.append(result["minimum_value"])
             counts.append(algorithm.nfev)
             times.append(elapsed)
+            reasons.append(algorithm.stop_reason)
 
         rows.append(
             BenchmarkRow(
@@ -103,6 +144,7 @@ def run_benchmark(
                 best=statistics.fmean(values),
                 nfev=int(statistics.fmean(counts)),
                 elapsed=statistics.fmean(times),
+                stop_reason=_summarize_stop_reasons(reasons),
             )
         )
     return rows
@@ -110,12 +152,21 @@ def run_benchmark(
 
 def format_rows(rows: list[BenchmarkRow]) -> str:
     """Форматирует результаты в таблицу для печати."""
-    header = f"{'Алгоритм':32s} {'f(x)':>12s} {'nfev':>10s} {'время, с':>10s}"
+    stop_width = max(
+        len("остановка"),
+        max((len(row.stop_reason or "-") for row in rows), default=0),
+    )
+    header = (
+        f"{'Алгоритм':32s} {'f(x)':>12s} {'nfev':>10s} "
+        f"{'время, с':>10s} {'остановка':>{stop_width}s}"
+    )
     lines = [header, "-" * len(header)]
     for row in rows:
+        stop_reason = row.stop_reason or "-"
         lines.append(
             f"{row.name:32s} {row.best:12.4e} "
-            f"{row.nfev:10d} {row.elapsed:10.3f}"
+            f"{row.nfev:10d} {row.elapsed:10.3f} "
+            f"{stop_reason:>{stop_width}s}"
         )
     return "\n".join(lines)
 
@@ -133,7 +184,30 @@ def main() -> None:
     parser.add_argument("--agents", type=int, default=30)
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--max-fev",
+        type=int,
+        default=None,
+        help="мягкий лимит обращений к целевой функции",
+    )
+    parser.add_argument(
+        "--target",
+        type=float,
+        default=None,
+        help="целевое значение fitness для ранней остановки",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="логировать итерации алгоритмов",
+    )
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        )
 
     problem = get_problem(args.problem)
     if problem.dim is not None and args.dim != problem.dim:
@@ -147,6 +221,9 @@ def main() -> None:
         args.agents,
         args.runs,
         args.seed,
+        max_fev=args.max_fev,
+        target=args.target,
+        iteration_info=args.verbose,
     )
     print(format_rows(rows))
 

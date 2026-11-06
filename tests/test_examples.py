@@ -1,6 +1,7 @@
 """Тесты демонстрационных скриптов."""
 
 import importlib
+import logging
 from pathlib import Path
 
 import pytest
@@ -62,6 +63,102 @@ def test_benchmark_returns_all_algorithms() -> None:
     text = benchmark_example.format_rows(rows)
     assert "WhaleOptimizationAlgorithm" in text
     assert "nfev" in text
+
+
+def test_benchmark_propagates_target() -> None:
+    rows = benchmark_example.run_benchmark(
+        sphere,
+        (-5.0, 5.0),
+        dim=2,
+        iterations=5,
+        agents=5,
+        runs=1,
+        seed=0,
+        target=100.0,
+    )
+
+    assert all(row.stop_reason == "target 1/1" for row in rows)
+    assert all(row.nfev == 5 for row in rows)
+
+
+def test_benchmark_propagates_max_fev() -> None:
+    rows = benchmark_example.run_benchmark(
+        sphere,
+        (-5.0, 5.0),
+        dim=2,
+        iterations=5,
+        agents=5,
+        runs=1,
+        seed=0,
+        max_fev=5,
+    )
+
+    assert all(row.stop_reason == "max_fev 1/1" for row in rows)
+    assert all(row.nfev == 5 for row in rows)
+
+
+def test_benchmark_logs_iterations_when_enabled(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(
+        logging.INFO,
+        logger="metaheuristics_lib.core.runner",
+    ):
+        rows = benchmark_example.run_benchmark(
+            sphere,
+            (-5.0, 5.0),
+            dim=2,
+            iterations=1,
+            agents=5,
+            runs=1,
+            seed=0,
+            iteration_info=True,
+        )
+
+    assert rows
+    assert "Iteration 1 end" in caplog.text
+
+
+def test_benchmark_aggregates_mixed_stop_reasons() -> None:
+    rows = benchmark_example.run_benchmark(
+        sphere,
+        (-5.12, 5.12),
+        dim=2,
+        iterations=2,
+        agents=5,
+        runs=2,
+        seed=0,
+        max_fev=5,
+        target=5.0,
+    )
+
+    assert all(row.stop_reason == "max_fev 1/2, target 1/2" for row in rows)
+
+
+def test_format_rows_prints_stop_reason() -> None:
+    rows = [
+        benchmark_example.BenchmarkRow(
+            name="Stopped",
+            best=1.0,
+            nfev=10,
+            elapsed=0.5,
+            stop_reason="target 2/3, max_fev 1/3",
+        ),
+        benchmark_example.BenchmarkRow(
+            name="Finished",
+            best=2.0,
+            nfev=20,
+            elapsed=1.0,
+            stop_reason=None,
+        ),
+    ]
+
+    lines = benchmark_example.format_rows(rows).splitlines()
+
+    assert "остановка" in lines[0]
+    assert "target 2/3, max_fev 1/3" in lines[2]
+    assert lines[3].endswith(" " + "-")
+    assert len({len(line) for line in lines}) == 1
 
 
 def test_benchmark_rejects_zero_runs() -> None:
