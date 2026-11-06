@@ -5,6 +5,8 @@
 через ``metaheuristics_lib.*``.
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from metaheuristics_lib.algorithms import (
     ArtificialBeeColony,
     CrowSearchAlgorithm,
@@ -39,6 +41,11 @@ from metaheuristics_lib.problems import (
     three_hump_camel,
 )
 
+try:
+    __version__ = version("metaheuristics-lib")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
+
 __all__ = [
     "PROBLEMS",
     "ArtificialBeeColony",
@@ -56,6 +63,7 @@ __all__ = [
     "Runner",
     "SerialEvaluator",
     "WhaleOptimizationAlgorithm",
+    "__version__",
     "ackley",
     "get_problem",
     "griewank",
