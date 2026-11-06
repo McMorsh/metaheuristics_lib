@@ -9,7 +9,7 @@
 - Пять алгоритмов: ABC, CSA, GWO, WOA и EPO.
 - Единый интерфейс `BaseAlgorithm` и запуск через `Runner`.
 - Последовательный, процессный и MPI-режимы вычисления функции.
-- Пакетная оценка fitness и счётчик обращений `nfev`.
+- Единый `Evaluator` и счётчик обращений `nfev`.
 - Метрики сходимости, логирование и визуализация.
 - Тесты, покрытие, Ruff и strict mypy.
 
@@ -92,11 +92,16 @@ with mhl.Runner(algorithm, iteration_info=False) as runner:
 print(result["minimum_value"])
 print(result["minimum_x"])
 print(len(history))
+print(mhl.__version__)
 ```
 
 `result` содержит ключи `minimum_x` и `minimum_value`. История включает
 начальную точку. Без ранней остановки её длина равна `max_iter + 1`,
 при остановке она короче.
+
+`iteration_info` принимает `False`, `True` или положительное целое.
+`False` отключает лог итераций, `True` логирует каждую итерацию,
+целое число задаёт интервал.
 
 Счётчик `algorithm.nfev` показывает число обращений к целевой функции
 за текущий запуск. Он сбрасывается в `initialize` и учитывает каждую
@@ -147,8 +152,6 @@ print(summarize_run(result, target=0.0))
 ```
 
 `run_repeated` возвращает один словарь с результатами всех запусков.
-Устаревшая `run_multiple` возвращает список из одного такого словаря
-и выдаёт `DeprecationWarning`.
 
 ## Границы поиска
 
@@ -252,13 +255,19 @@ pip install "mpich>=5" "mpi4py>=4"
 python -m examples.run_serial --iterations 20 --agents 10 --runs 2
 python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
 python -m examples.benchmark --iterations 100 --agents 30 --runs 3
+python -m examples.benchmark --problem rastrigin --dim 10 \
+    --max-fev 2000 --target 1e-6 --verbose
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 ```
 
 Графики сохраняются в `plots/` или в каталог из `--output-dir`.
-`examples.benchmark` печатает среднее лучшее значение, `nfev` и время
-для всех пяти алгоритмов на задаче из реестра. Команды примеров
-требуют editable-установки пакета: `pip install -e ".[dev,plot]"`.
+`examples.benchmark` печатает среднее лучшее значение, `nfev`, время
+и причину остановки для всех пяти алгоритмов на задаче из реестра.
+`--max-fev` и `--target` включают раннюю остановку, а `--verbose`
+логирует итерации. Причина остановки агрегируется по запускам,
+например `target 2/3, max_fev 1/3`; `-` означает, что все запуски
+дошли до `max_iter`. Команды примеров требуют editable-установки
+пакета: `pip install -e ".[dev,plot]"`.
 
 ## Реестр задач
 
