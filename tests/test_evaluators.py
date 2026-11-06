@@ -1,6 +1,5 @@
 """Тесты вычислителей целевой функции."""
 
-import importlib
 import importlib.util
 from multiprocessing.context import BaseContext
 from typing import Any
@@ -15,7 +14,6 @@ from metaheuristics_lib.core.evaluator import (
     SerialEvaluator,
 )
 from metaheuristics_lib.problems.continuous import sphere
-from metaheuristics_lib.utils.mp_utils import mp_evaluate_fitness
 
 POSITIONS = np.array(
     [
@@ -191,28 +189,6 @@ def test_process_pool_evaluator_rejects_zero_chunksize() -> None:
         ProcessPoolEvaluator(sphere, chunksize=0)
 
 
-def test_mp_evaluate_fitness_with_one_process() -> None:
-    np.testing.assert_allclose(
-        mp_evaluate_fitness(POSITIONS, sphere, processes=1),
-        EXPECTED,
-    )
-
-
-@pytest.mark.integration
-def test_mp_evaluate_fitness_accepts_context(
-    process_context: BaseContext | None,
-) -> None:
-    np.testing.assert_allclose(
-        mp_evaluate_fitness(
-            MANY_POSITIONS,
-            sphere,
-            processes=2,
-            mp_context=process_context,
-        ),
-        MANY_EXPECTED,
-    )
-
-
 @pytest.mark.integration
 def test_process_pool_evaluator_with_two_workers(
     process_context: BaseContext | None,
@@ -234,8 +210,3 @@ def test_mpi_evaluator_reports_missing_dependency() -> None:
 
     with pytest.raises(RuntimeError, match="mpi4py"):
         MPIEvaluator(sphere)
-
-
-def test_mpi_utils_import_is_lazy() -> None:
-    module = importlib.import_module("metaheuristics_lib.utils.mpi_utils")
-    assert module is not None

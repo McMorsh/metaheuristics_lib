@@ -1,6 +1,5 @@
 """Метрики сходимости и статистика запусков."""
 
-import warnings
 from collections.abc import Sequence
 from typing import TypedDict
 
@@ -53,9 +52,12 @@ def best_so_far(history: History) -> list[float]:
 def area_under_curve(history: History, normalize: bool = True) -> float:
     """Вычисляет площадь под кривой best-so-far.
 
+    При ``normalize=True`` площадь делится на число точек истории,
+    а не на число интервалов.
+
     Args:
         history: значения функции по итерациям.
-        normalize: делить ли площадь на число итераций.
+        normalize: делить ли площадь на число точек истории.
 
     Returns:
         Площадь под кривой.
@@ -140,6 +142,11 @@ def run_repeated(
         seed: базовый seed. Запуск ``i`` получает ``seed + i``. Если
             параметр не задан, используется seed раннера или алгоритма.
 
+    После завершения восстанавливаются ``runner.seed`` и seed
+    алгоритма, а не состояние RNG. При ``seed=None`` это создаёт новый
+    генератор, поэтому продолжение работы с тем же алгоритмом может
+    дать другую траекторию.
+
     Returns:
         Словарь с массивами результатов по запускам.
 
@@ -190,80 +197,6 @@ def run_repeated(
     )
 
 
-def run_multiple(
-    runner: Runner,
-    runs: int = 30,
-    seed: int | None = None,
-) -> list[MultipleRunResults]:
-    """Устаревшая обёртка над :func:`run_repeated`.
-
-    Возвращает список из одного словаря для совместимости со старым
-    форматом. Новый код должен использовать :func:`run_repeated`.
-
-    Args:
-        runner: обёртка запуска.
-        runs: число запусков, не меньше 1.
-        seed: базовый seed.
-
-    Returns:
-        Список из одного словаря с результатами.
-
-    Raises:
-        ValueError: если ``runs < 1``.
-    """
-    warnings.warn(
-        "run_multiple устарела; используйте run_repeated",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return [run_repeated(runner, runs, seed)]
-
-
-def summarize_runs(
-    results: Sequence[MultipleRunResults],
-    target: float | None = None,
-) -> dict[str, float | None]:
-    """Собирает статистику по результатам запусков.
-
-    Args:
-        results: список результатов :func:`run_repeated`.
-        target: целевое значение для ``time_to_target``.
-
-    Returns:
-        Словарь со средними значениями, стандартными отклонениями и
-        долей успешных запусков.
-
-    Raises:
-        ValueError: если результаты или истории пусты.
-    """
-    if not results:
-        raise ValueError("Список результатов не должен быть пустым")
-
-    first = results[0]
-    histories = first["history_of_best_fitness"]
-    if not histories:
-        raise ValueError("Истории запусков не должны быть пустыми")
-
-    aucs = [area_under_curve(history) for history in histories]
-    summary: dict[str, float | None] = {
-        "mean_final": float(np.mean(first["best_fitness"])),
-        "std_final": float(np.std(first["best_fitness"])),
-        "mean_auc": float(np.mean(aucs)),
-        "std_auc": float(np.std(aucs)),
-        "time": float(np.mean(first["time"])),
-    }
-
-    if target is not None:
-        times = [time_to_target(history, target) for history in histories]
-        valid_times = [value for value in times if value is not None]
-        summary["mean_time_to_target"] = (
-            float(np.mean(valid_times)) if valid_times else None
-        )
-        summary["success_rate"] = len(valid_times) / len(times)
-
-    return summary
-
-
 def summarize_run(
     result: MultipleRunResults,
     target: float | None = None,
@@ -277,5 +210,37 @@ def summarize_run(
     Returns:
         Словарь со средними значениями, стандартными отклонениями и
         долей успешных запусков.
+
+    Raises:
+        ValueError: если результаты пусты или списки имеют разную
+            длину.
     """
-    return summarize_runs([result], target=target)
+    best_fitness = result["best_fitness"]
+    histories = result["history_of_best_fitness"]
+    elapsed = result["time"]
+    if not best_fitness or not histories or not elapsed:
+        raise ValueError("Результаты запусков не должны быть пустыми")
+    if not (len(best_fitness) == len(histories) == len(elapsed)):
+        raise ValueError(
+            "Списки best_fitness, history_of_best_fitness и time "
+            "должны иметь одинаковую длину"
+        )
+
+    aucs = [area_under_curve(history) for history in histories]
+    summary: dict[str, float | None] = {
+        "mean_final": float(np.mean(best_fitness)),
+        "std_final": float(np.std(best_fitness)),
+        "mean_auc": float(np.mean(aucs)),
+        "std_auc": float(np.std(aucs)),
+        "time": float(np.mean(elapsed)),
+    }
+
+    if target is not None:
+        times = [time_to_target(history, target) for history in histories]
+        valid_times = [value for value in times if value is not None]
+        summary["mean_time_to_target"] = (
+            float(np.mean(valid_times)) if valid_times else None
+        )
+        summary["success_rate"] = len(valid_times) / len(times)
+
+    return summary

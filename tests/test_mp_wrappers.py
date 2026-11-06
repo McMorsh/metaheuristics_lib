@@ -19,30 +19,12 @@ from metaheuristics_lib.algorithms import (
     WhaleOptimizationAlgorithm,
     WhaleOptimizationAlgorithmMP,
 )
-from metaheuristics_lib.algorithms._common import resolve_processes
 from metaheuristics_lib.core.algorithm import BaseAlgorithm
 from metaheuristics_lib.core.runner import Runner
 from metaheuristics_lib.core.types import OptimizationResult
 from metaheuristics_lib.problems.continuous import sphere
 
 AlgorithmFactory = Callable[..., BaseAlgorithm]
-
-
-def test_resolve_processes_prefers_new_name() -> None:
-    assert resolve_processes(2, None) == 2
-
-
-def test_resolve_processes_supports_deprecated_name() -> None:
-    with pytest.warns(DeprecationWarning, match="process"):
-        assert resolve_processes(None, 3) == 3
-
-
-def test_resolve_processes_rejects_conflict() -> None:
-    with (
-        pytest.warns(DeprecationWarning, match="process"),
-        pytest.raises(ValueError, match="противоречат"),
-    ):
-        resolve_processes(2, 3)
 
 
 MP_PAIRS = [

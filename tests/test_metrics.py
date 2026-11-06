@@ -13,10 +13,8 @@ from metaheuristics_lib.utils.metrics import (
     area_under_curve,
     best_so_far,
     mean_best,
-    run_multiple,
     run_repeated,
     summarize_run,
-    summarize_runs,
     time_to_target,
 )
 
@@ -195,42 +193,6 @@ def test_run_repeated_rejects_zero_runs() -> None:
         run_repeated(runner, runs=0)
 
 
-def test_run_multiple_is_deprecated() -> None:
-    algorithm = WhaleOptimizationAlgorithm(
-        sphere,
-        2,
-        (-5.0, 5.0),
-        agents=8,
-        max_iter=3,
-        seed=42,
-    )
-    with (
-        Runner(algorithm, iteration_info=False) as runner,
-        pytest.warns(DeprecationWarning, match="run_multiple"),
-    ):
-        results = run_multiple(runner, runs=1, seed=42)
-
-    assert len(results) == 1
-    assert len(results[0]["best_fitness"]) == 1
-
-
-def test_run_multiple_still_rejects_zero_runs() -> None:
-    algorithm = WhaleOptimizationAlgorithm(
-        sphere,
-        2,
-        (-5.0, 5.0),
-        agents=8,
-        max_iter=3,
-        seed=42,
-    )
-    with (
-        Runner(algorithm, iteration_info=False) as runner,
-        pytest.warns(DeprecationWarning, match="run_multiple"),
-        pytest.raises(ValueError, match="runs"),
-    ):
-        run_multiple(runner, runs=0)
-
-
 def test_summarize_run_returns_statistics() -> None:
     algorithm = WhaleOptimizationAlgorithm(
         sphere,
@@ -255,40 +217,40 @@ def test_summarize_run_returns_statistics() -> None:
     }
 
 
-def test_summarize_runs_accepts_legacy_list() -> None:
-    algorithm = WhaleOptimizationAlgorithm(
-        sphere,
-        2,
-        (-5.0, 5.0),
-        agents=8,
-        max_iter=3,
-        seed=42,
+def test_summarize_run_rejects_empty_results() -> None:
+    result = MultipleRunResults(
+        best_fitness=[],
+        history_of_best_fitness=[],
+        best_x=[],
+        history_of_best_x=[],
+        time=[],
     )
-    with (
-        Runner(algorithm, iteration_info=False) as runner,
-        pytest.warns(DeprecationWarning, match="run_multiple"),
-    ):
-        results = run_multiple(runner, runs=2, seed=42)
 
-    summary = summarize_runs(results, target=0.0)
-    assert "mean_final" in summary
+    with pytest.raises(ValueError, match="пустыми"):
+        summarize_run(result)
 
 
-def test_summarize_runs_rejects_empty_results() -> None:
-    with pytest.raises(ValueError, match="пустым"):
-        summarize_runs([])
+def test_summarize_run_rejects_empty_history() -> None:
+    result = MultipleRunResults(
+        best_fitness=[1.0],
+        history_of_best_fitness=[[]],
+        best_x=[],
+        history_of_best_x=[],
+        time=[1.0],
+    )
+
+    with pytest.raises(ValueError, match="пустой"):
+        summarize_run(result)
 
 
-def test_summarize_runs_rejects_empty_histories() -> None:
-    results = [
-        MultipleRunResults(
-            best_fitness=[],
-            history_of_best_fitness=[],
-            best_x=[],
-            history_of_best_x=[],
-            time=[],
-        )
-    ]
+def test_summarize_run_rejects_mismatched_lengths() -> None:
+    result = MultipleRunResults(
+        best_fitness=[1.0],
+        history_of_best_fitness=[[1.0]],
+        best_x=[],
+        history_of_best_x=[],
+        time=[1.0, 2.0],
+    )
 
-    with pytest.raises(ValueError, match="Истории"):
-        summarize_runs(results)
+    with pytest.raises(ValueError, match="одинаковую длину"):
+        summarize_run(result)
