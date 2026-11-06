@@ -432,3 +432,120 @@ def test_runner_rejects_algorithm_with_mutated_max_iter() -> None:
 
     with pytest.raises(ValueError, match="max_iter"):
         Runner(algorithm, iteration_info=False).run()
+
+
+def test_runner_logs_every_iteration(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    algorithm = StubAlgorithm(
+        sphere,
+        2,
+        (-1.0, 1.0),
+        agents=4,
+        max_iter=3,
+        seed=42,
+    )
+    with (
+        caplog.at_level(
+            logging.INFO,
+            logger="metaheuristics_lib.core.runner",
+        ),
+        Runner(algorithm, iteration_info=True) as runner,
+    ):
+        runner.run()
+
+    messages = [
+        record.message
+        for record in caplog.records
+        if record.message.startswith("Iteration ")
+    ]
+    assert len(messages) == 3
+
+
+def test_runner_disables_iteration_logs(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    algorithm = StubAlgorithm(
+        sphere,
+        2,
+        (-1.0, 1.0),
+        agents=4,
+        max_iter=3,
+        seed=42,
+    )
+    with (
+        caplog.at_level(
+            logging.INFO,
+            logger="metaheuristics_lib.core.runner",
+        ),
+        Runner(algorithm, iteration_info=False) as runner,
+    ):
+        runner.run()
+
+    messages = [
+        record.message
+        for record in caplog.records
+        if record.message.startswith("Iteration ")
+    ]
+    assert not messages
+
+
+def test_runner_logs_iterations_at_interval(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    algorithm = StubAlgorithm(
+        sphere,
+        2,
+        (-1.0, 1.0),
+        agents=4,
+        max_iter=5,
+        seed=42,
+    )
+    with (
+        caplog.at_level(
+            logging.INFO,
+            logger="metaheuristics_lib.core.runner",
+        ),
+        Runner(algorithm, iteration_info=2) as runner,
+    ):
+        runner.run()
+
+    messages = [
+        record.message
+        for record in caplog.records
+        if record.message.startswith("Iteration ")
+    ]
+    assert len(messages) == 2
+    assert messages[0].startswith("Iteration 2 end")
+    assert messages[1].startswith("Iteration 4 end")
+
+
+def test_runner_rejects_zero_iteration_info() -> None:
+    algorithm = StubAlgorithm(
+        sphere,
+        2,
+        (-1.0, 1.0),
+        agents=4,
+        max_iter=1,
+        seed=42,
+    )
+
+    with pytest.raises(ValueError, match="iteration_info"):
+        Runner(algorithm, iteration_info=0)
+
+
+def test_runner_rejects_non_integer_iteration_info() -> None:
+    algorithm = StubAlgorithm(
+        sphere,
+        2,
+        (-1.0, 1.0),
+        agents=4,
+        max_iter=1,
+        seed=42,
+    )
+
+    with pytest.raises(TypeError, match="iteration_info"):
+        Runner(
+            algorithm,
+            iteration_info="2",  # type: ignore[arg-type]  # проверка runtime
+        )

@@ -83,23 +83,43 @@ class Runner:
 
     Args:
         algorithm: алгоритм, готовый к инициализации.
-        iteration_info: печатать ли информацию о каждой итерации.
+        iteration_info: ``False`` отключает лог итераций, ``True``
+            логирует каждую итерацию, целое число задаёт интервал.
         seed: seed для запуска. Если задан, переопределяет seed
             алгоритма.
 
     Без контекстного менеджера ресурсы закрываются после завершения
     ``run``, поэтому повторные запуски следует выполнять внутри
     ``with Runner(...)``, особенно для пула процессов.
+
+    Raises:
+        TypeError: если ``iteration_info`` не bool и не int.
+        ValueError: если целое ``iteration_info`` меньше 1.
     """
 
     def __init__(
         self,
         algorithm: BaseAlgorithm,
-        iteration_info: bool = True,
+        iteration_info: bool | int = True,
         seed: int | None = None,
     ) -> None:
         self.algorithm = algorithm
-        self.iteration_info = iteration_info
+        self._iteration_interval: int | None
+        if isinstance(iteration_info, bool):
+            self._iteration_interval = 1 if iteration_info else None
+        elif isinstance(iteration_info, int):
+            if iteration_info < 1:
+                raise ValueError(
+                    "Параметр iteration_info должен быть положительным, "
+                    f"получено {iteration_info}"
+                )
+            self._iteration_interval = iteration_info
+        else:
+            raise TypeError(
+                "Параметр iteration_info должен быть bool или int, "
+                f"получено {type(iteration_info).__name__}"
+            )
+        self.iteration_info: bool | int = iteration_info
         self.seed = seed
         self._entered = False
 
@@ -187,7 +207,11 @@ class Runner:
             history_of_best_fitness.append(result["minimum_value"])
             history_of_best_x.append(list(result["minimum_x"]))
 
-            if self.iteration_info and self.algorithm.is_root:
+            if (
+                self._iteration_interval is not None
+                and self.algorithm.is_root
+                and (iteration + 1) % self._iteration_interval == 0
+            ):
                 logger.info(
                     f"Iteration {iteration + 1} end, "
                     f"time = {iteration_elapsed:.4f} c, "
