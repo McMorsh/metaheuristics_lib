@@ -11,7 +11,8 @@ optional MPI.
 - Five algorithms: ABC, CSA, GWO, WOA, and EPO.
 - A common `BaseAlgorithm` interface and the `Runner` driver.
 - Sequential, process-based, and MPI evaluation of the objective.
-- A shared `Evaluator` abstraction and the `nfev` counter.
+- A shared `Evaluator` abstraction, the `nfev` counter, and
+  evaluation-budget histories.
 - Convergence metrics, logging, and plotting.
 - Tests, coverage, Ruff, and strict mypy.
 
@@ -115,11 +116,15 @@ the history is shorter.
 `False` disables iteration logging, `True` logs every iteration, and
 an integer sets the interval.
 
-The `algorithm.nfev` counter reports the number of objective calls in
+The `nfev` counter reports the number of objective evaluations for
 the current run. It is reset in `initialize` and counts every position
-in a batch, including repeated evaluations of a known point. In MPI the
-counter grows by the global batch size on every rank, so it is the same
-everywhere and does not need to be summed across ranks.
+in a batch, including repeated evaluations of a known point. In MPI
+the counter grows by the global batch size on every rank, so it is
+identical everywhere and does not need to be summed across ranks.
+
+`algorithm.nfev_history` and `algorithm.best_fitness_history` record
+the best value after each evaluation. For a batched evaluation one
+entry covers the whole batch, so the histories have equal length.
 
 ## Early stopping
 
@@ -175,6 +180,32 @@ print(summarize_run(result, target=0.0))
 
 `run_repeated` returns a single dictionary with the results of all
 runs.
+
+For budget-based comparisons use `best_at_budget` and
+`evaluations_to_target`:
+
+```python
+from metaheuristics_lib.utils.metrics import (
+    best_at_budget,
+    evaluations_to_target,
+)
+
+value = best_at_budget(
+    algorithm.nfev_history,
+    algorithm.best_fitness_history,
+    budget=500,
+)
+count = evaluations_to_target(
+    algorithm.nfev_history,
+    algorithm.best_fitness_history,
+    target=1e-6,
+)
+```
+
+`best_at_budget` returns the best value at the last history point
+with `nfev <= budget`, or `None` if the budget is below the first
+point. `evaluations_to_target` returns the evaluation count at the
+first point that reaches the target.
 
 ## Search bounds
 
@@ -285,6 +316,8 @@ process-based modes without it.
 python -m examples.run_serial --iterations 20 --agents 10 --runs 2
 python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
 python -m examples.benchmark --iterations 100 --agents 30 --runs 3
+python -m examples.benchmark --iterations 100 --agents 30 --runs 3 \
+    --budget 3000
 python -m examples.benchmark --problem rastrigin --dim 10 \
     --max-fev 2000 --target 1e-6 --verbose
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
@@ -294,10 +327,15 @@ Plots are saved to `plots/` or to the directory passed with
 `--output-dir`. `examples.benchmark` prints the mean best value,
 `nfev`, elapsed time, and the stop reason for all five algorithms on a
 problem from the registry. `--max-fev` and `--target` enable early
-stopping, and `--verbose` logs iterations. Stop reasons are aggregated
-across runs, for example `target 2/3, max_fev 1/3`; `-` means that all
-runs reached `max_iter`. The example commands require an editable
-install: `pip install -e ".[dev,plot]"`.
+stopping, and `--verbose` logs iterations. `--budget` compares the
+algorithms at a fixed number of evaluations and adds `f(x)@budget`
+and `budget` columns; `budget` shows how many runs actually reached
+the budget and have a measurement at it, for example `2/3`. If no run
+can be measured at the budget, `f(x)@budget` is `-` and `budget` is
+`0/N`. Stop reasons are aggregated across runs, for
+example `target 2/3, max_fev 1/3`; `-` means that all runs reached
+`max_iter`. The example commands require an editable install:
+`pip install -e ".[dev,plot]"`.
 
 ## Problem registry
 

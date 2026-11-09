@@ -11,7 +11,8 @@
 - Пять алгоритмов: ABC, CSA, GWO, WOA и EPO.
 - Единый интерфейс `BaseAlgorithm` и запуск через `Runner`.
 - Последовательный, процессный и MPI-режимы вычисления функции.
-- Единый `Evaluator` и счётчик обращений `nfev`.
+- Единый `Evaluator`, счётчик обращений `nfev` и история бюджета
+  вычислений.
 - Метрики сходимости, логирование и визуализация.
 - Тесты, покрытие, Ruff и strict mypy.
 
@@ -119,6 +120,10 @@ print(mhl.__version__)
 счётчик увеличивается на размер глобального пакета на каждом ранге,
 поэтому он одинаков везде и не требует суммирования по рангам.
 
+`algorithm.nfev_history` и `algorithm.best_fitness_history` хранят
+лучшее значение после каждой оценки. При пакетной оценке одна запись
+приходится на весь пакет, поэтому длины историй совпадают.
+
 ## Ранняя остановка
 
 Алгоритм можно остановить по достижению целевого значения fitness
@@ -173,6 +178,32 @@ print(summarize_run(result, target=0.0))
 ```
 
 `run_repeated` возвращает один словарь с результатами всех запусков.
+
+Для сравнения при фиксированном бюджете используйте
+`best_at_budget` и `evaluations_to_target`:
+
+```python
+from metaheuristics_lib.utils.metrics import (
+    best_at_budget,
+    evaluations_to_target,
+)
+
+value = best_at_budget(
+    algorithm.nfev_history,
+    algorithm.best_fitness_history,
+    budget=500,
+)
+count = evaluations_to_target(
+    algorithm.nfev_history,
+    algorithm.best_fitness_history,
+    target=1e-6,
+)
+```
+
+`best_at_budget` возвращает лучшее значение в последней точке
+истории с `nfev <= budget` или `None`, если бюджет меньше первой
+точки. `evaluations_to_target` возвращает число оценок в первой
+точке, где цель достигнута.
 
 ## Границы поиска
 
@@ -283,6 +314,8 @@ pip install "mpich>=5" "mpi4py>=4"
 python -m examples.run_serial --iterations 20 --agents 10 --runs 2
 python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
 python -m examples.benchmark --iterations 100 --agents 30 --runs 3
+python -m examples.benchmark --iterations 100 --agents 30 --runs 3 \
+    --budget 3000
 python -m examples.benchmark --problem rastrigin --dim 10 \
     --max-fev 2000 --target 1e-6 --verbose
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
@@ -292,10 +325,15 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 `examples.benchmark` печатает среднее лучшее значение, `nfev`, время
 и причину остановки для всех пяти алгоритмов на задаче из реестра.
 `--max-fev` и `--target` включают раннюю остановку, а `--verbose`
-логирует итерации. Причина остановки агрегируется по запускам,
-например `target 2/3, max_fev 1/3`; `-` означает, что все запуски
-дошли до `max_iter`. Команды примеров требуют editable-установки
-пакета: `pip install -e ".[dev,plot]"`.
+логирует итерации. `--budget` сравнивает алгоритмы при фиксированном
+числе оценок и добавляет колонки `f(x)@budget` и `budget`; в
+последней показано, сколько запусков действительно израсходовало
+бюджет и имеет измерение на нём, например `2/3`. Если ни один
+запуск не измерен на бюджете, `f(x)@budget` равен `-`, а `budget`
+равен `0/N`. Причина остановки агрегируется по запускам, например
+`target 2/3, max_fev 1/3`; `-` означает, что все запуски дошли до
+`max_iter`. Команды примеров требуют editable-установки пакета:
+`pip install -e ".[dev,plot]"`.
 
 ## Реестр задач
 

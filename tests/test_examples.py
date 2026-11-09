@@ -97,6 +97,75 @@ def test_benchmark_propagates_max_fev() -> None:
     assert all(row.nfev == 5 for row in rows)
 
 
+def test_benchmark_computes_best_at_budget() -> None:
+    rows = benchmark_example.run_benchmark(
+        sphere,
+        (-5.0, 5.0),
+        dim=2,
+        iterations=10,
+        agents=5,
+        runs=1,
+        seed=0,
+        budget=10,
+    )
+
+    assert all(row.budget_reached == "1/1" for row in rows)
+    for row in rows:
+        assert row.best_at_budget is not None
+        assert row.best_at_budget >= row.best
+
+    text = benchmark_example.format_rows(rows)
+    assert "f(x)@budget" in text
+    assert "budget" in text
+
+
+def test_benchmark_budget_above_total_returns_none() -> None:
+    rows = benchmark_example.run_benchmark(
+        sphere,
+        (-5.0, 5.0),
+        dim=2,
+        iterations=2,
+        agents=5,
+        runs=1,
+        seed=0,
+        budget=10000,
+    )
+
+    assert all(row.best_at_budget is None for row in rows)
+    assert all(row.budget_reached == "0/1" for row in rows)
+
+
+def test_benchmark_budget_below_population_returns_none() -> None:
+    rows = benchmark_example.run_benchmark(
+        sphere,
+        (-5.0, 5.0),
+        dim=2,
+        iterations=2,
+        agents=5,
+        runs=1,
+        seed=0,
+        budget=3,
+    )
+
+    assert all(row.best_at_budget is None for row in rows)
+    assert all(row.budget_reached == "0/1" for row in rows)
+    assert "0/1" in benchmark_example.format_rows(rows)
+
+
+def test_benchmark_rejects_zero_budget() -> None:
+    with pytest.raises(ValueError, match="budget"):
+        benchmark_example.run_benchmark(
+            sphere,
+            (-5.0, 5.0),
+            dim=2,
+            iterations=1,
+            agents=5,
+            runs=1,
+            seed=0,
+            budget=0,
+        )
+
+
 def test_benchmark_logs_iterations_when_enabled(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

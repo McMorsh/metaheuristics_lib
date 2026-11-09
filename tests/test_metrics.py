@@ -1,6 +1,9 @@
 """Тесты метрик сходимости."""
 
+from collections.abc import Sequence
+
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 from metaheuristics_lib.algorithms.whale.whale_optimization_algorithm import (
@@ -11,7 +14,9 @@ from metaheuristics_lib.problems.continuous import sphere
 from metaheuristics_lib.utils.metrics import (
     MultipleRunResults,
     area_under_curve,
+    best_at_budget,
     best_so_far,
+    evaluations_to_target,
     mean_best,
     run_repeated,
     summarize_run,
@@ -254,3 +259,96 @@ def test_summarize_run_rejects_mismatched_lengths() -> None:
 
     with pytest.raises(ValueError, match="одинаковую длину"):
         summarize_run(result)
+
+
+@pytest.mark.parametrize(
+    ("budget", "expected"),
+    [
+        (4, None),
+        (5, 10.0),
+        (12, 8.0),
+        (100, 6.0),
+    ],
+)
+def test_best_at_budget_returns_last_point(
+    budget: int,
+    expected: float | None,
+) -> None:
+    value = best_at_budget(
+        [5, 10, 15],
+        [10.0, 8.0, 6.0],
+        budget,
+    )
+
+    assert value == expected
+
+
+def test_best_at_budget_accepts_numpy_histories() -> None:
+    value = best_at_budget(
+        np.array([5, 10, 15]),
+        np.array([10.0, 8.0, 6.0]),
+        10,
+    )
+
+    assert value == pytest.approx(8.0)
+
+
+def test_best_at_budget_rejects_negative_budget() -> None:
+    with pytest.raises(ValueError, match="budget"):
+        best_at_budget([5], [1.0], -1)
+
+
+def test_best_at_budget_rejects_non_integer_budget() -> None:
+    with pytest.raises(TypeError, match="budget"):
+        best_at_budget(
+            [5],
+            [1.0],
+            1.5,  # type: ignore[arg-type]  # проверка runtime
+        )
+
+
+@pytest.mark.parametrize(
+    ("nfev", "best"),
+    [
+        ([], []),
+        ([5, 10], [1.0]),
+        ([10, 5], [1.0, 2.0]),
+        (np.array([[5]]), [1.0]),
+    ],
+)
+def test_best_at_budget_rejects_invalid_histories(
+    nfev: Sequence[int] | npt.NDArray[np.int64],
+    best: Sequence[float],
+) -> None:
+    with pytest.raises(ValueError):
+        best_at_budget(nfev, best, 5)
+
+
+def test_evaluations_to_target_returns_first_hit() -> None:
+    value = evaluations_to_target(
+        [5, 10, 15],
+        [10.0, 8.0, 6.0],
+        8.0,
+    )
+
+    assert value == 10
+
+
+def test_evaluations_to_target_returns_none() -> None:
+    value = evaluations_to_target(
+        [5, 10, 15],
+        [10.0, 8.0, 6.0],
+        5.0,
+    )
+
+    assert value is None
+
+
+def test_evaluations_to_target_uses_tolerance() -> None:
+    value = evaluations_to_target(
+        [5],
+        [1.0 + 1e-10],
+        1.0,
+    )
+
+    assert value == 5

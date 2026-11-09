@@ -1,6 +1,7 @@
 """Тесты счётчика обращений к целевой функции."""
 
 from collections.abc import Callable
+from itertools import pairwise
 
 import pytest
 
@@ -88,3 +89,46 @@ def test_abc_nfev_counts_employed_onlooker_and_scout_phases() -> None:
 def test_nfev_is_zero_before_initialization() -> None:
     algorithm = _make(WhaleOptimizationAlgorithm, max_iter=1)
     assert algorithm.nfev == 0
+
+
+@pytest.mark.parametrize(
+    "algorithm_factory",
+    [ArtificialBeeColony, *POPULATION_ALGORITHMS],
+)
+def test_nfev_history_tracks_evaluations(
+    algorithm_factory: AlgorithmFactory,
+) -> None:
+    algorithm = _make(algorithm_factory, max_iter=3)
+
+    with Runner(algorithm, iteration_info=False) as runner:
+        runner.run()
+
+    assert len(algorithm.nfev_history) == len(algorithm.best_fitness_history)
+    assert algorithm.nfev_history[-1] == algorithm.nfev
+    assert algorithm.best_fitness_history[-1] == pytest.approx(
+        algorithm.best_fitness
+    )
+    assert all(
+        later >= earlier for earlier, later in pairwise(algorithm.nfev_history)
+    )
+    assert all(
+        later <= earlier
+        for earlier, later in pairwise(algorithm.best_fitness_history)
+    )
+
+
+@pytest.mark.parametrize(
+    "algorithm_factory",
+    [ArtificialBeeColony, *POPULATION_ALGORITHMS],
+)
+def test_nfev_history_is_reset_on_repeated_run(
+    algorithm_factory: AlgorithmFactory,
+) -> None:
+    algorithm = _make(algorithm_factory, max_iter=2)
+
+    with Runner(algorithm, iteration_info=False) as runner:
+        runner.run()
+        first_length = len(algorithm.nfev_history)
+        runner.run()
+
+    assert len(algorithm.nfev_history) == first_length

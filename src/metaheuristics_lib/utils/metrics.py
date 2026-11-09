@@ -1,6 +1,8 @@
 """Метрики сходимости и статистика запусков."""
 
+import math
 from collections.abc import Sequence
+from numbers import Integral
 from typing import TypedDict
 
 import numpy as np
@@ -10,6 +12,7 @@ from metaheuristics_lib.core.runner import Runner
 
 type History = Sequence[float] | npt.NDArray[np.float64]
 type HistoryList = Sequence[History] | npt.NDArray[np.float64]
+type NfevHistory = Sequence[int] | npt.NDArray[np.int64]
 
 
 class MultipleRunResults(TypedDict):
@@ -97,6 +100,106 @@ def time_to_target(history: History, target: float) -> int | None:
     for index, value in enumerate(values):
         if value <= target + 1e-4:
             return index
+    return None
+
+
+def _validated_histories(
+    nfev_history: NfevHistory,
+    best_history: History,
+) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.float64]]:
+    """Проверяет и приводит истории к массивам.
+
+    Args:
+        nfev_history: число оценок в точках истории.
+        best_history: лучшее значение в тех же точках.
+
+    Returns:
+        Пары массивов ``nfev`` и ``best``.
+
+    Raises:
+        ValueError: если истории пусты, имеют разную длину, не
+            одномерны или ``nfev`` убывает.
+    """
+    nfev = np.asarray(nfev_history, dtype=np.int64)
+    best = np.asarray(best_history, dtype=np.float64)
+    if nfev.ndim != 1 or best.ndim != 1:
+        raise ValueError("Истории должны быть одномерными")
+    if nfev.size == 0 or best.size == 0:
+        raise ValueError("Истории не должны быть пустыми")
+    if nfev.size != best.size:
+        raise ValueError("Длины историй должны совпадать")
+    if np.any(np.diff(nfev) < 0):
+        raise ValueError("История nfev должна быть неубывающей")
+    return nfev, best
+
+
+def best_at_budget(
+    nfev_history: NfevHistory,
+    best_history: History,
+    budget: int,
+) -> float | None:
+    """Возвращает лучшее значение при заданном бюджете вычислений.
+
+    Args:
+        nfev_history: число оценок в точках истории.
+        best_history: лучшее значение в тех же точках.
+        budget: бюджет обращений к целевой функции, не меньше нуля.
+
+    Returns:
+        Лучшее значение на последней точке с ``nfev <= budget`` или
+        ``None``, если таких точек нет.
+
+    Raises:
+        TypeError: если бюджет не является целым числом.
+        ValueError: если бюджет отрицательный или истории
+            некорректны.
+    """
+    if isinstance(budget, bool) or not isinstance(budget, Integral):
+        raise TypeError(
+            f"Параметр budget должен быть целым, получено {budget!r}"
+        )
+    budget_value = int(budget)
+    if budget_value < 0:
+        raise ValueError(
+            "Параметр budget должен быть неотрицательным, "
+            f"получено {budget_value}"
+        )
+
+    nfev, best = _validated_histories(nfev_history, best_history)
+    index = int(np.searchsorted(nfev, budget_value, side="right")) - 1
+    if index < 0:
+        return None
+    return float(best[index])
+
+
+def evaluations_to_target(
+    nfev_history: NfevHistory,
+    best_history: History,
+    target: float,
+) -> int | None:
+    """Возвращает число оценок до достижения цели.
+
+    Args:
+        nfev_history: число оценок в точках истории.
+        best_history: лучшее значение в тех же точках.
+        target: целевое значение функции.
+
+    Returns:
+        Число оценок в первой точке, где цель достигнута, или
+        ``None``, если цель не достигнута.
+
+    Raises:
+        ValueError: если истории некорректны.
+    """
+    nfev, best = _validated_histories(nfev_history, best_history)
+    for value, count in zip(best, nfev, strict=True):
+        if value <= target or math.isclose(
+            float(value),
+            target,
+            rel_tol=1e-9,
+            abs_tol=1e-12,
+        ):
+            return int(count)
     return None
 
 

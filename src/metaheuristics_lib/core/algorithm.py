@@ -33,6 +33,11 @@ class BaseAlgorithm(ABC):
     считается отдельным обращением, даже если алгоритм повторно
     оценивает уже известную точку.
 
+    Атрибуты ``nfev_history`` и ``best_fitness_history`` фиксируют
+    лучшее значение после каждой оценки. При пакетной оценке одна
+    запись приходится на весь пакет, поэтому длина истории равна
+    числу вызовов ``_evaluate``, а не числу позиций.
+
     Атрибут ``ALLOWED_PARAMS`` задаёт допустимые ключи ``**params``.
     Неизвестный ключ считается опечаткой и вызывает ``TypeError``.
 
@@ -145,6 +150,8 @@ class BaseAlgorithm(ABC):
         )
         self.iteration = 0
         self.nfev = 0
+        self.nfev_history: list[int] = []
+        self.best_fitness_history: list[float] = []
         self.stop_reason: str | None = None
         self.best_solution: npt.NDArray[np.float64] | None = None
         self.best_fitness = float("inf")
@@ -185,6 +192,8 @@ class BaseAlgorithm(ABC):
         """Сбрасывает результаты предыдущего запуска."""
         self.iteration = 0
         self.nfev = 0
+        self.nfev_history = []
+        self.best_fitness_history = []
         self.stop_reason = None
         self.best_solution = None
         self.best_fitness = float("inf")
@@ -207,6 +216,8 @@ class BaseAlgorithm(ABC):
         values = self.evaluator.evaluate(positions)
         self.nfev += int(positions.shape[0])
         self._validate_fitness(values)
+        self.nfev_history.append(self.nfev)
+        self.best_fitness_history.append(self.best_fitness)
         return values
 
     @staticmethod
@@ -277,14 +288,32 @@ class BaseAlgorithm(ABC):
         self._validate_fitness(fitness)
 
         index = int(np.argmin(fitness))
-        value = float(fitness[index])
+        self._consider_best(positions[index], float(fitness[index]))
+
+    def _consider_best(
+        self,
+        position: npt.NDArray[np.float64],
+        value: float,
+    ) -> None:
+        """Обновляет лучшее решение и синхронизирует историю.
+
+        Args:
+            position: координаты кандидата формы ``(dim,)``.
+            value: значение целевой функции.
+        """
         if value < self.best_fitness:
             self.best_fitness = value
             self.best_solution = np.array(
-                positions[index],
+                position,
                 dtype=np.float64,
                 copy=True,
             )
+            self._sync_best_history()
+
+    def _sync_best_history(self) -> None:
+        """Записывает текущее лучшее значение в последнюю точку истории."""
+        if self.best_fitness_history:
+            self.best_fitness_history[-1] = self.best_fitness
 
     def _best_position(self) -> npt.NDArray[np.float64]:
         """Возвращает лучшее решение или поднимает ошибку."""

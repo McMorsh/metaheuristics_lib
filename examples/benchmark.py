@@ -19,6 +19,7 @@ from metaheuristics_lib import (
     WhaleOptimizationAlgorithm,
 )
 from metaheuristics_lib.problems.registry import get_problem, list_problems
+from metaheuristics_lib.utils.metrics import best_at_budget
 
 AlgorithmFactory = Callable[..., BaseAlgorithm]
 
@@ -42,6 +43,10 @@ class BenchmarkRow:
         elapsed: среднее время запуска в секундах.
         stop_reason: распределение причин остановки по запускам или
             ``None``, если все запуски дошли до ``max_iter``.
+        best_at_budget: среднее лучшее значение при заданном бюджете
+            или ``None``, если бюджет не задан.
+        budget_reached: число запусков, дошедших до бюджета, в виде
+            ``"2/3"`` или ``None``, если бюджет не задан.
     """
 
     name: str
@@ -49,6 +54,8 @@ class BenchmarkRow:
     nfev: int
     elapsed: float
     stop_reason: str | None = None
+    best_at_budget: float | None = None
+    budget_reached: str | None = None
 
 
 def _summarize_stop_reasons(
@@ -84,6 +91,7 @@ def run_benchmark(
     *,
     max_fev: int | None = None,
     target: float | None = None,
+    budget: int | None = None,
     iteration_info: bool | int = False,
 ) -> list[BenchmarkRow]:
     """Запускает все алгоритмы и собирает средние показатели.
@@ -98,6 +106,8 @@ def run_benchmark(
         seed: базовый seed; запуск ``i`` получает ``seed + i``.
         max_fev: мягкий лимит обращений к целевой функции.
         target: целевое значение fitness для ранней остановки.
+        budget: бюджет обращений к функции для сравнения. Если
+            ``max_fev`` не задан, он устанавливается равным бюджету.
         iteration_info: настройка логов итераций для :class:`Runner`.
 
     Returns:
@@ -110,6 +120,19 @@ def run_benchmark(
         raise ValueError(
             f"Параметр runs должен быть положительным, получено {runs}"
         )
+    if budget is not None:
+        if isinstance(budget, bool) or not isinstance(budget, int):
+            raise TypeError(
+                f"Параметр budget должен быть целым, получено {budget!r}"
+            )
+        if budget < 1:
+            raise ValueError(
+                f"Параметр budget должен быть положительным, получено {budget}"
+            )
+
+    effective_max_fev = max_fev
+    if budget is not None and effective_max_fev is None:
+        effective_max_fev = budget
 
     rows: list[BenchmarkRow] = []
     for factory in ALGORITHMS:
@@ -117,6 +140,8 @@ def run_benchmark(
         counts: list[int] = []
         times: list[float] = []
         reasons: list[str | None] = []
+        budget_values: list[float] = []
+        budget_hits = 0
         for run in range(runs):
             algorithm = factory(
                 problem,
@@ -125,7 +150,7 @@ def run_benchmark(
                 agents=agents,
                 max_iter=iterations,
                 seed=seed + run,
-                max_fev=max_fev,
+                max_fev=effective_max_fev,
                 target=target,
             )
             with Runner(
@@ -137,6 +162,15 @@ def run_benchmark(
             counts.append(algorithm.nfev)
             times.append(elapsed)
             reasons.append(algorithm.stop_reason)
+            if budget is not None and algorithm.nfev >= budget:
+                value = best_at_budget(
+                    algorithm.nfev_history,
+                    algorithm.best_fitness_history,
+                    budget,
+                )
+                if value is not None:
+                    budget_values.append(value)
+                    budget_hits += 1
 
         rows.append(
             BenchmarkRow(
@@ -145,6 +179,12 @@ def run_benchmark(
                 nfev=int(statistics.fmean(counts)),
                 elapsed=statistics.fmean(times),
                 stop_reason=_summarize_stop_reasons(reasons),
+                best_at_budget=(
+                    statistics.fmean(budget_values) if budget_values else None
+                ),
+                budget_reached=(
+                    f"{budget_hits}/{runs}" if budget is not None else None
+                ),
             )
         )
     return rows
@@ -156,18 +196,31 @@ def format_rows(rows: list[BenchmarkRow]) -> str:
         len("остановка"),
         max((len(row.stop_reason or "-") for row in rows), default=0),
     )
+    has_budget = any(row.budget_reached is not None for row in rows)
     header = (
         f"{'Алгоритм':32s} {'f(x)':>12s} {'nfev':>10s} "
         f"{'время, с':>10s} {'остановка':>{stop_width}s}"
     )
+    if has_budget:
+        header += f" {'f(x)@budget':>12s} {'budget':>8s}"
+
     lines = [header, "-" * len(header)]
     for row in rows:
         stop_reason = row.stop_reason or "-"
-        lines.append(
+        line = (
             f"{row.name:32s} {row.best:12.4e} "
             f"{row.nfev:10d} {row.elapsed:10.3f} "
             f"{stop_reason:>{stop_width}s}"
         )
+        if has_budget:
+            budget_value = (
+                f"{row.best_at_budget:12.4e}"
+                if row.best_at_budget is not None
+                else f"{'-':>12s}"
+            )
+            budget_reached = row.budget_reached or "-"
+            line += f" {budget_value} {budget_reached:>8s}"
+        lines.append(line)
     return "\n".join(lines)
 
 
@@ -197,6 +250,12 @@ def main() -> None:
         help="целевое значение fitness для ранней остановки",
     )
     parser.add_argument(
+        "--budget",
+        type=int,
+        default=None,
+        help="бюджет обращений к функции для сравнения",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="логировать итерации алгоритмов",
@@ -223,6 +282,7 @@ def main() -> None:
         args.seed,
         max_fev=args.max_fev,
         target=args.target,
+        budget=args.budget,
         iteration_info=args.verbose,
     )
     print(format_rows(rows))

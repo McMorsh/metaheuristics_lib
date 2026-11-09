@@ -74,6 +74,7 @@ class ArtificialBeeColony(BaseAlgorithm):
             self.local_best_bee[index] = candidate
             self.local_best_fitness[index] = value
             self.trial[index] = 0
+            self._consider_best(candidate, value)
         else:
             self.trial[index] += 1
 
@@ -106,6 +107,7 @@ class ArtificialBeeColony(BaseAlgorithm):
             self.local_best_bee[scout_index] = position
             self.local_best_fitness[scout_index] = value
             self.trial[scout_index] = 0
+            self._consider_best(position, value)
 
         self._update_best(
             self.local_best_bee,

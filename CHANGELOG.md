@@ -14,11 +14,19 @@ and the project follows [Semantic Versioning](https://semver.org/).
   Russian translations are available in `README.ru.md` and
   `CHANGELOG.ru.md`.
 - Public `docs/` directory reserved for algorithm documentation.
+- `algorithm.nfev_history` and `algorithm.best_fitness_history` track
+  the best value after each evaluation.
+- Benchmark option `--budget` compares algorithms at a fixed number of
+  evaluations and prints `f(x)@budget` and `budget` columns.
+- `best_at_budget` and `evaluations_to_target` metrics for budget-based
+  analysis.
 
 ### Changed
 
 - Development notes, plans, and release instructions moved from `docs/`
   to `notes/`.
+- ABC updates the global best immediately after an improving
+  candidate, so the budget history is exact within an iteration.
 
 ## 0.4.0 - 2026-11-06
 
