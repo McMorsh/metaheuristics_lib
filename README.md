@@ -1,19 +1,21 @@
 # Metaheuristics Lib
 
-Учебная Python-библиотека метаэвристических алгоритмов глобальной
-оптимизации. Поддерживает последовательный режим, multiprocessing и
-опциональный MPI.
+[English](README.md) | [Русский](README.ru.md)
 
-## Возможности
+An educational Python library of metaheuristic global optimization
+algorithms. It supports sequential execution, multiprocessing, and
+optional MPI.
 
-- Пять алгоритмов: ABC, CSA, GWO, WOA и EPO.
-- Единый интерфейс `BaseAlgorithm` и запуск через `Runner`.
-- Последовательный, процессный и MPI-режимы вычисления функции.
-- Единый `Evaluator` и счётчик обращений `nfev`.
-- Метрики сходимости, логирование и визуализация.
-- Тесты, покрытие, Ruff и strict mypy.
+## Features
 
-## Структура
+- Five algorithms: ABC, CSA, GWO, WOA, and EPO.
+- A common `BaseAlgorithm` interface and the `Runner` driver.
+- Sequential, process-based, and MPI evaluation of the objective.
+- A shared `Evaluator` abstraction and the `nfev` counter.
+- Convergence metrics, logging, and plotting.
+- Tests, coverage, Ruff, and strict mypy.
+
+## Project layout
 
 ```text
 metaheuristics_lib/
@@ -28,16 +30,21 @@ metaheuristics_lib/
 │       ├── core/
 │       ├── problems/
 │       ├── utils/
-│       ├── __init__.py   # публичный фасад
+│       ├── __init__.py   # public facade
 │       └── py.typed
 ├── examples/
 ├── tests/
+├── docs/                 # reserved for algorithm documentation
+├── notes/                # local development notes, not tracked
 ├── pyproject.toml
 ├── README.md
+├── README.ru.md
+├── CHANGELOG.md
+├── CHANGELOG.ru.md
 └── LICENSE
 ```
 
-## Установка
+## Installation
 
 ```bash
 git clone https://github.com/McMorsh/metaheuristics_lib
@@ -57,22 +64,26 @@ python -m pip install -U pip
 pip install -e ".[dev,plot]"
 ```
 
-Для MPI добавьте extra `mpi` и установите OpenMPI или MPICH:
+For MPI, install the `mpi` extra and a system MPI implementation
+(OpenMPI or MPICH):
 
 ```bash
 pip install -e ".[dev,plot,mpi]"
 ```
 
-## Публичный API
+## Public API
 
-Пакет `metaheuristics_lib` реэкспортирует алгоритмы, `Runner`,
-`Evaluator`, границы и тестовые функции. Внутренние модули доступны
-как `metaheuristics_lib.core...`, `metaheuristics_lib.algorithms...`,
-`metaheuristics_lib.problems...` и `metaheuristics_lib.utils...`.
-Отдельных top-level пакетов `core`, `utils`, `problems` и `algorithms`
-больше нет. Пример использования приведен ниже.
+The `metaheuristics_lib` package re-exports the algorithms, `Runner`,
+`Evaluator`, bounds helpers, and benchmark problems. Internal modules
+are available as `metaheuristics_lib.core...`,
+`metaheuristics_lib.algorithms...`,
+`metaheuristics_lib.problems...`, and
+`metaheuristics_lib.utils...`.
 
-## Быстрый старт
+The old top-level packages `core`, `utils`, `problems`, and
+`algorithms` no longer exist. Use the qualified imports shown above.
+
+## Quick start
 
 ```python
 import metaheuristics_lib as mhl
@@ -95,26 +106,29 @@ print(len(history))
 print(mhl.__version__)
 ```
 
-`result` содержит ключи `minimum_x` и `minimum_value`. История включает
-начальную точку. Без ранней остановки её длина равна `max_iter + 1`,
-при остановке она короче.
+`result` contains the keys `minimum_x` and `minimum_value`. The
+history includes the initial point. Without early stopping its length
+is `max_iter + 1`. If the algorithm stops before the last iteration,
+the history is shorter.
 
-`iteration_info` принимает `False`, `True` или положительное целое.
-`False` отключает лог итераций, `True` логирует каждую итерацию,
-целое число задаёт интервал.
+`iteration_info` accepts `False`, `True`, or a positive integer.
+`False` disables iteration logging, `True` logs every iteration, and
+an integer sets the interval.
 
-Счётчик `algorithm.nfev` показывает число обращений к целевой функции
-за текущий запуск. Он сбрасывается в `initialize` и учитывает каждую
-позицию пакета, включая повторную оценку уже известной точки. В MPI
-счётчик увеличивается на размер глобального пакета на каждом ранге,
-поэтому он одинаков везде и не требует суммирования по рангам.
+The `algorithm.nfev` counter reports the number of objective calls in
+the current run. It is reset in `initialize` and counts every position
+in a batch, including repeated evaluations of a known point. In MPI the
+counter grows by the global batch size on every rank, so it is the same
+everywhere and does not need to be summed across ranks.
 
-## Ранняя остановка
+## Early stopping
 
-Алгоритм можно остановить по достижению целевого значения fitness
-или по лимиту вычислений:
+An algorithm can stop when it reaches a target fitness value or an
+evaluation budget:
 
 ```python
+import metaheuristics_lib as mhl
+
 algorithm = mhl.WhaleOptimizationAlgorithm(
     problem=mhl.sphere,
     dim=10,
@@ -127,23 +141,31 @@ algorithm = mhl.WhaleOptimizationAlgorithm(
 )
 ```
 
-- `target` останавливает алгоритм, когда лучшее значение не больше
-  `target`.
-- `max_fev` задаёт мягкий лимит `nfev`. Он проверяется на границах
-  итераций, поэтому фактическое число вычислений может превысить
-  лимит в пределах одной итерации.
-- `algorithm.stop_reason` принимает значение `"target"`, `"max_fev"`
-  или `None`.
+- `target` stops the algorithm when the best value is less than or
+  equal to `target`.
+- `max_fev` sets a soft limit on `nfev`. It is checked at iteration
+  boundaries, so the actual number of evaluations can exceed the limit
+  within one iteration.
+- `algorithm.stop_reason` is `"target"`, `"max_fev"`, or `None`.
 
-Библиотека не настраивает logging при импорте. Чтобы видеть сообщения
-`Runner`, настройте logging в приложении, например
+The library does not configure logging on import. To see `Runner`
+messages, configure logging in the application, for example with
 `logging.basicConfig(level=logging.INFO)`.
 
-## Метрики нескольких запусков
+## Metrics for multiple runs
 
 ```python
 import metaheuristics_lib as mhl
 from metaheuristics_lib.utils.metrics import run_repeated, summarize_run
+
+algorithm = mhl.WhaleOptimizationAlgorithm(
+    problem=mhl.sphere,
+    dim=10,
+    bounds=(-10.0, 10.0),
+    agents=20,
+    max_iter=200,
+    seed=42,
+)
 
 with mhl.Runner(algorithm, iteration_info=False) as runner:
     result = run_repeated(runner, runs=10, seed=42)
@@ -151,30 +173,32 @@ with mhl.Runner(algorithm, iteration_info=False) as runner:
 print(summarize_run(result, target=0.0))
 ```
 
-`run_repeated` возвращает один словарь с результатами всех запусков.
+`run_repeated` returns a single dictionary with the results of all
+runs.
 
-## Границы поиска
+## Search bounds
 
-Поддерживаются:
+Supported forms:
 
-- `(low, high)` для всех размерностей;
-- `[(low, high), ...]` длиной `dim`;
-- `numpy.ndarray` формы `(2,)` или `(dim, 2)`.
+- `(low, high)` for all dimensions;
+- `[(low, high), ...]` with `dim` entries;
+- a `numpy.ndarray` of shape `(2,)` or `(dim, 2)`.
 
-Неверные формы, `NaN`, бесконечности и `low >= high` приводят к
+Invalid shapes, `NaN`, infinities, and `low >= high` raise
 `ValueError`.
 
-## Параллельный режим
+## Parallel execution
 
-Параметр `processes` задаёт число процессов:
+The `processes` parameter sets the number of worker processes:
 
 ```python
+import metaheuristics_lib as mhl
 from metaheuristics_lib.algorithms import (
     WhaleOptimizationAlgorithmMP,
 )
 
 algorithm = WhaleOptimizationAlgorithmMP(
-    problem=sphere,
+    problem=mhl.sphere,
     dim=10,
     bounds=(-10.0, 10.0),
     agents=20,
@@ -184,16 +208,21 @@ algorithm = WhaleOptimizationAlgorithmMP(
 )
 ```
 
-Целевая функция должна быть определена на верхнем уровне модуля и быть
-picklable. Значение `processes=1` выполняется последовательно. Пакеты
-меньше четырёх позиций тоже считаются в текущем процессе: запуск пула
-для них дороже вычисления.
+The objective must be defined at module level and be picklable. A
+value of `processes=1` runs sequentially. Batches with fewer than four
+positions are also evaluated in the current process because starting a
+pool costs more than the computation.
 
-При необходимости можно явно выбрать контекст multiprocessing:
+You can select the multiprocessing context explicitly:
 
 ```python
 import multiprocessing
 import sys
+
+import metaheuristics_lib as mhl
+from metaheuristics_lib.algorithms import (
+    WhaleOptimizationAlgorithmMP,
+)
 
 start_method = (
     "fork"
@@ -203,7 +232,7 @@ start_method = (
 )
 
 algorithm = WhaleOptimizationAlgorithmMP(
-    problem=sphere,
+    problem=mhl.sphere,
     dim=10,
     bounds=(-10.0, 10.0),
     processes=2,
@@ -211,18 +240,19 @@ algorithm = WhaleOptimizationAlgorithmMP(
 )
 ```
 
-Это полезно в окружениях, где стандартный forkserver запрещен.
-На macOS и Windows пример использует `spawn`.
+This is useful in environments where the default forkserver is
+disabled. On macOS and Windows the example uses `spawn`.
 
 ## MPI
 
 ```python
+import metaheuristics_lib as mhl
 from metaheuristics_lib.algorithms import (
     WhaleOptimizationAlgorithmMPI,
 )
 
 algorithm = WhaleOptimizationAlgorithmMPI(
-    problem=sphere,
+    problem=mhl.sphere,
     dim=10,
     bounds=(-10.0, 10.0),
     agents=20,
@@ -231,25 +261,25 @@ algorithm = WhaleOptimizationAlgorithmMPI(
 )
 ```
 
-Запуск:
+Run it with:
 
 ```bash
 mpiexec -n 4 python -m examples.run_mpi --iterations 100 --agents 20
 ```
 
-Если системного MPI нет и нет прав root, на Linux можно поставить
-готовый рантайм из PyPI:
+If no system MPI is installed and you do not have root access, you can
+install a runtime from PyPI on Linux:
 
 ```bash
 pip install "mpich>=5" "mpi4py>=4"
 ```
 
-Все ранги выполняют одинаковые обновления, а вычисление функции
-распределяется через MPI. Результат печатает только rank 0. `mpi4py`
-импортируется лениво: без него библиотека работает в последовательном
-и процессном режимах.
+All ranks perform the same updates, while objective evaluation is
+distributed through MPI. Only rank 0 prints the result. `mpi4py` is
+imported lazily, so the library still works in sequential and
+process-based modes without it.
 
-## Примеры
+## Examples
 
 ```bash
 python -m examples.run_serial --iterations 20 --agents 10 --runs 2
@@ -260,18 +290,19 @@ python -m examples.benchmark --problem rastrigin --dim 10 \
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 ```
 
-Графики сохраняются в `plots/` или в каталог из `--output-dir`.
-`examples.benchmark` печатает среднее лучшее значение, `nfev`, время
-и причину остановки для всех пяти алгоритмов на задаче из реестра.
-`--max-fev` и `--target` включают раннюю остановку, а `--verbose`
-логирует итерации. Причина остановки агрегируется по запускам,
-например `target 2/3, max_fev 1/3`; `-` означает, что все запуски
-дошли до `max_iter`. Команды примеров требуют editable-установки
-пакета: `pip install -e ".[dev,plot]"`.
+Plots are saved to `plots/` or to the directory passed with
+`--output-dir`. `examples.benchmark` prints the mean best value,
+`nfev`, elapsed time, and the stop reason for all five algorithms on a
+problem from the registry. `--max-fev` and `--target` enable early
+stopping, and `--verbose` logs iterations. Stop reasons are aggregated
+across runs, for example `target 2/3, max_fev 1/3`; `-` means that all
+runs reached `max_iter`. The example commands require an editable
+install: `pip install -e ".[dev,plot]"`.
 
-## Реестр задач
+## Problem registry
 
-Стандартные функции собраны в `metaheuristics_lib.problems.registry`:
+The standard benchmark problems are collected in
+`metaheuristics_lib.problems.registry`:
 
 ```python
 import metaheuristics_lib as mhl
@@ -285,11 +316,11 @@ print(problem.bounds)
 print(problem.optimum)
 ```
 
-Для задач с переменной размерностью `dim` равен `None`. Для
-фиксированных двумерных задач задано `optimum_x`. Benchmark принимает
-имена задач из реестра через `--problem`.
+For problems with variable dimension, `dim` is `None`. Fixed
+two-dimensional problems provide `optimum_x`. The benchmark accepts
+registry names through `--problem`.
 
-## Тесты и проверки
+## Tests and checks
 
 ```bash
 ruff check .
@@ -307,24 +338,33 @@ pytest -q \
     --cov-fail-under=70
 ```
 
-Интеграционные тесты запускают реальный пул процессов и могут быть
-недоступны в ограниченных sandbox-окружениях.
+The integration tests start a real process pool and may be unavailable
+in restricted sandbox environments. Tests that require `mpi4py` skip
+automatically when it is not installed.
 
-## Своя задача
+## Custom problem
 
 ```python
 import numpy as np
+import numpy.typing as npt
 
 
-def my_function(x: np.ndarray) -> float:
-    """Возвращает значение целевой функции."""
+def my_function(x: npt.NDArray[np.float64]) -> float:
+    """Return the objective value."""
     return float(np.sum(x**2))
 ```
 
-Передайте функцию в параметр `problem` любого алгоритма. Она должна
-возвращать конечное число: `NaN`, `inf` и `-inf` приводят к
-`ValueError` с указанием позиции.
+Pass the function as the `problem` argument of any algorithm. It must
+return a finite number: `NaN`, `inf`, and `-inf` raise `ValueError`
+with the position that produced the invalid value.
 
-## Лицензия
+## Documentation
 
-MIT. См. `LICENSE`.
+The `docs/` directory is reserved for algorithm documentation.
+Development plans and release instructions are kept in `notes/` and
+are not tracked. See `CHANGELOG.md` for the release history; the
+Russian translation is in `CHANGELOG.ru.md`.
+
+## License
+
+MIT. See `LICENSE`.

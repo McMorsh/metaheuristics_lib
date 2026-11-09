@@ -1,73 +1,89 @@
 # Changelog
 
-Все заметные изменения проекта. Формат основан на Keep a Changelog,
-версии следуют семантическому версионированию.
+[English](CHANGELOG.md) | [Русский](CHANGELOG.ru.md)
+
+All notable changes to this project are documented in this file. The
+format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and the project follows [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+
+- English `README.md` and `CHANGELOG.md` as the primary documentation.
+  Russian translations are available in `README.ru.md` and
+  `CHANGELOG.ru.md`.
+- Public `docs/` directory reserved for algorithm documentation.
+
+### Changed
+
+- Development notes, plans, and release instructions moved from `docs/`
+  to `notes/`.
 
 ## 0.4.0 - 2026-11-06
 
 ### Breaking changes
 
-- Удалён устаревший параметр `process` в `_mp`-обёртках. Используйте
-  `processes`.
-- Удалён модуль `metaheuristics_lib.utils.algorithm_utils`.
-  Используйте `normalize_bounds`, `SerialEvaluator` и помощники
-  `BaseAlgorithm`.
-- Удалена устаревшая функция `run_multiple`. Используйте
-  `run_repeated`.
-- Удалены `summarize_runs` и модули `utils.mp_utils` и
-  `utils.mpi_utils`. Используйте `summarize_run`,
-  `ProcessPoolEvaluator` и `MPIEvaluator`.
+- Removed the deprecated `process` parameter from the `_mp` wrappers.
+  Use `processes`.
+- Removed the `metaheuristics_lib.utils.algorithm_utils` module. Use
+  `normalize_bounds`, `SerialEvaluator`, and the `BaseAlgorithm`
+  helpers.
+- Removed the deprecated `run_multiple` function. Use `run_repeated`.
+- Removed `summarize_runs` and the `utils.mp_utils` and
+  `utils.mpi_utils` modules. Use `summarize_run`,
+  `ProcessPoolEvaluator`, and `MPIEvaluator`.
 
 ### Added
 
-- `max_fev` и `target` для ранней остановки, причина доступна в
+- `max_fev` and `target` for early stopping; the reason is available in
   `algorithm.stop_reason`.
-- Проверка конечности fitness: `NaN`, `inf` и `-inf` вызывают
+- Fitness finiteness validation: `NaN`, `inf`, and `-inf` raise
   `ValueError`.
-- Реестр задач `metaheuristics_lib.problems.registry` с границами и
-  известными оптимумами.
-- `run_repeated` и `summarize_run` для нескольких запусков.
-- Публичный `metaheuristics_lib.__version__`.
-- MPI-сценарии для неравных чанков, ошибки objective, пустой
-  популяции и сравнения всех пяти обёрток с serial.
-- Benchmark принимает `--max-fev`, `--target` и `--verbose`,
-  печатает распределение причин остановки по запускам.
+- The `metaheuristics_lib.problems.registry` problem registry with
+  bounds and known optima.
+- `run_repeated` and `summarize_run` for multiple runs.
+- Public `metaheuristics_lib.__version__`.
+- MPI scenarios for uneven chunks, objective errors, an empty
+  population, and comparison of all five wrappers with the serial
+  versions.
+- Benchmark options `--max-fev`, `--target`, and `--verbose`; the
+  benchmark prints the distribution of stop reasons across runs.
 
 ### Changed
 
-- `BaseAlgorithm` проверяет неизвестные `**params` и поднимает
-  `TypeError`.
-- Удалён алиас `GreyWolfOptimizer` из MPI-модуля. Используйте
+- `BaseAlgorithm` validates unknown `**params` and raises `TypeError`.
+- Removed the `GreyWolfOptimizer` alias from the MPI module. Use
   `GreyWolfOptimizerMPI`.
-- EPO оценивает кандидатов пакетно, ABC использует
-  последовательные фазы, GWO векторизован.
-- CSA возвращён к исходной логике: `expand_rate` снова
-  поддерживается, `flight_length` по умолчанию 1.0.
-- ABC: возвращены последовательные фазы и отбор
-  `1 / (1 + abs(fitness))`; качество выросло, скорость снизилась.
-- WOA возвращён к исходной логике без исследовательской ветви.
-- EPO выбирает обе ветви температуры `T`; радиус стаи `R`
-  моделируется на `[0, 2]`, а не на `[0, 1]`.
-- `Runner` принимает `iteration_info` как `bool` или интервал.
-- `area_under_curve` и `run_repeated` документируют нормировку и
-  восстановление seed.
+- EPO evaluates candidates in batches, ABC uses sequential phases, and
+  GWO is vectorized.
+- CSA restored to its original logic: `expand_rate` is supported again
+  and `flight_length` defaults to 1.0.
+- ABC restored sequential phases and `1 / (1 + abs(fitness))`
+  selection; quality improved, speed decreased.
+- WOA restored to its original logic without the exploration branch.
+- EPO selects both temperature branches `T`; the swarm radius `R` is
+  modeled on `[0, 2]` instead of `[0, 1]`.
+- `Runner` accepts `iteration_info` as a `bool` or an interval.
+- `area_under_curve` and `run_repeated` document normalization and seed
+  restoration.
 
-## 0.3.0 - 2026-11-04
+## 0.3.0 - 2026-11-05
 
 ### Breaking changes
 
-- Проект переведён на `src`-layout. Импорты `from core...` и
-  `from algorithms...` заменены на `from metaheuristics_lib...`.
+- Migrated the project to the `src` layout. Imports `from core...` and
+  `from algorithms...` were replaced with `from metaheuristics_lib...`.
 
 ### Added
 
-- Счётчик `nfev`.
-- Benchmark `examples.benchmark`.
-- Тесты сходимости и покрытие с порогами 80/70.
-- GitHub Actions с jobs `tests`, `package` и `mpi`.
+- The `nfev` counter.
+- The `examples.benchmark` benchmark.
+- Convergence tests and coverage thresholds of 80/70.
+- GitHub Actions with `tests`, `package`, and `mpi` jobs.
 
 ### Changed
 
-- ABC и EPO переведены на пакетную оценку fitness.
-- GWO избавлен от двойного Python-цикла.
-- `ProcessPoolEvaluator` не создаёт пул для малых пакетов.
+- ABC and EPO moved to batch fitness evaluation.
+- GWO no longer uses a double Python loop.
+- `ProcessPoolEvaluator` does not create a pool for small batches.
