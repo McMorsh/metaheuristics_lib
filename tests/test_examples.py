@@ -1,7 +1,10 @@
 """Тесты демонстрационных скриптов."""
 
+import csv
 import importlib
+import json
 import logging
+from dataclasses import fields
 from pathlib import Path
 
 import pytest
@@ -241,3 +244,166 @@ def test_benchmark_rejects_zero_runs() -> None:
             runs=0,
             seed=0,
         )
+
+
+def test_run_experiments_supports_multiple_problems_and_dims() -> None:
+    records = benchmark_example.run_experiments(
+        ["sphere", "ackley"],
+        [2, 3],
+        iterations=1,
+        agents=5,
+        runs=1,
+        seed=0,
+    )
+
+    assert len(records) == (2 * 2 * len(benchmark_example.ALGORITHMS))
+    assert {(record.problem, record.dim) for record in records} == {
+        ("sphere", 2),
+        ("sphere", 3),
+        ("ackley", 2),
+        ("ackley", 3),
+    }
+
+    rows = benchmark_example.summarize_records(records)
+    text = benchmark_example.format_rows(rows)
+
+    assert len(rows) == len(records)
+    assert "Задача" in text
+    assert "dim" in text
+
+
+def test_run_experiments_rejects_fixed_dim_mismatch() -> None:
+    with pytest.raises(ValueError, match="dim=2"):
+        benchmark_example.run_experiments(
+            ["himmelblau"],
+            [3],
+            iterations=1,
+            agents=5,
+            runs=1,
+            seed=0,
+        )
+
+
+def _make_record(
+    best: float,
+    *,
+    seed: int = 0,
+    nfev: int = 5,
+    budget: int | None = None,
+    best_at_budget: float | None = None,
+) -> benchmark_example.RunRecord:
+    return benchmark_example.RunRecord(
+        algorithm="A",
+        problem="sphere",
+        dim=2,
+        seed=seed,
+        best=best,
+        nfev=nfev,
+        stop_reason=None,
+        elapsed=0.1,
+        budget=budget,
+        best_at_budget=best_at_budget,
+    )
+
+
+def test_summarize_records_computes_statistics() -> None:
+    records = [
+        _make_record(1.0, seed=0),
+        _make_record(2.0, seed=1),
+        _make_record(3.0, seed=2),
+    ]
+
+    rows = benchmark_example.summarize_records(records, target=2.0)
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.best == pytest.approx(2.0)
+    assert row.median == pytest.approx(2.0)
+    assert row.std == pytest.approx(1.0)
+    assert row.success_rate == pytest.approx(2 / 3)
+    assert row.runs == 3
+
+
+def test_summarize_records_aggregates_budget() -> None:
+    records = [
+        _make_record(
+            0.5,
+            seed=0,
+            nfev=10,
+            budget=10,
+            best_at_budget=1.0,
+        ),
+        _make_record(
+            2.0,
+            seed=1,
+            nfev=5,
+            budget=10,
+            best_at_budget=None,
+        ),
+    ]
+
+    rows = benchmark_example.summarize_records(records)
+
+    assert len(rows) == 1
+    assert rows[0].best_at_budget == pytest.approx(1.0)
+    assert rows[0].budget_reached == "1/2"
+
+
+def test_format_rows_shows_problem_and_statistics() -> None:
+    row = benchmark_example.BenchmarkRow(
+        name="A",
+        best=2.0,
+        nfev=5,
+        elapsed=0.1,
+        problem="sphere",
+        dim=2,
+        median=2.0,
+        std=1.0,
+        success_rate=0.5,
+        runs=3,
+    )
+
+    text = benchmark_example.format_rows([row])
+
+    assert "Задача" in text
+    assert "медиана" in text
+    assert "std" in text
+    assert "success" in text
+
+
+def test_run_fields_match_record_fields() -> None:
+    record_fields = {
+        field.name for field in fields(benchmark_example.RunRecord)
+    }
+
+    assert set(benchmark_example.RUN_FIELDS) == record_fields
+
+
+def test_save_records_json(tmp_path: Path) -> None:
+    records = [_make_record(1.0)]
+    path = tmp_path / "runs.json"
+
+    benchmark_example.save_records(records, path)
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload[0]["algorithm"] == "A"
+    assert payload[0]["best"] == pytest.approx(1.0)
+
+
+def test_save_records_csv(tmp_path: Path) -> None:
+    records = [_make_record(1.0)]
+    path = tmp_path / "runs.csv"
+
+    benchmark_example.save_records(records, path)
+
+    with path.open(newline="", encoding="utf-8") as file:
+        rows = list(csv.DictReader(file))
+
+    assert len(rows) == 1
+    assert rows[0]["algorithm"] == "A"
+    assert float(rows[0]["best"]) == pytest.approx(1.0)
+
+
+def test_save_records_rejects_unknown_format(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="Неподдерживаемый"):
+        benchmark_example.save_records([], tmp_path / "runs.txt")
