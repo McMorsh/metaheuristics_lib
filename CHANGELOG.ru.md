@@ -6,7 +6,7 @@
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 версии следуют [семантическому версионированию](https://semver.org/).
 
-## [Unreleased]
+## 0.5.0 - 2026-11-10
 
 ### Added
 
