@@ -20,6 +20,11 @@ and the project follows [Semantic Versioning](https://semver.org/).
   evaluations and prints `f(x)@budget` and `budget` columns.
 - `best_at_budget` and `evaluations_to_target` metrics for budget-based
   analysis.
+- `RunRecord` raw results and export to JSON or CSV via `--output`.
+- Multiple `--problem` and `--dim` values plus `--all-problems` for
+  multi-problem benchmark runs.
+- Benchmark summary statistics: median, standard deviation and success
+  rate.
 
 ### Changed
 
@@ -27,6 +32,8 @@ and the project follows [Semantic Versioning](https://semver.org/).
   to `notes/`.
 - ABC updates the global best immediately after an improving
   candidate, so the budget history is exact within an iteration.
+- The benchmark table adds problem, dimension, median, standard
+  deviation and success columns when they are applicable.
 
 ## 0.4.0 - 2026-11-06
 

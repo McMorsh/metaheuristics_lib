@@ -14,6 +14,8 @@ optional MPI.
 - A shared `Evaluator` abstraction, the `nfev` counter, and
   evaluation-budget histories.
 - Convergence metrics, logging, and plotting.
+- Benchmark with raw CSV/JSON export, multi-problem runs, and
+  summary statistics.
 - Tests, coverage, Ruff, and strict mypy.
 
 ## Project layout
@@ -318,6 +320,9 @@ python -m examples.run_mp --iterations 20 --agents 10 --processes 1 2
 python -m examples.benchmark --iterations 100 --agents 30 --runs 3
 python -m examples.benchmark --iterations 100 --agents 30 --runs 3 \
     --budget 3000
+python -m examples.benchmark --all-problems --dim 2 --runs 3
+python -m examples.benchmark --problem sphere --problem ackley \
+    --dim 2 --dim 10 --runs 3 --output results.csv
 python -m examples.benchmark --problem rastrigin --dim 10 \
     --max-fev 2000 --target 1e-6 --verbose
 mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
@@ -325,15 +330,20 @@ mpiexec -n 4 python -m examples.run_mpi --iterations 20 --agents 10
 
 Plots are saved to `plots/` or to the directory passed with
 `--output-dir`. `examples.benchmark` prints the mean best value,
-`nfev`, elapsed time, and the stop reason for all five algorithms on a
-problem from the registry. `--max-fev` and `--target` enable early
-stopping, and `--verbose` logs iterations. `--budget` compares the
-algorithms at a fixed number of evaluations and adds `f(x)@budget`
-and `budget` columns; `budget` shows how many runs actually reached
-the budget and have a measurement at it, for example `2/3`. If no run
-can be measured at the budget, `f(x)@budget` is `-` and `budget` is
-`0/N`. Stop reasons are aggregated across runs, for
-example `target 2/3, max_fev 1/3`; `-` means that all runs reached
+`nfev`, elapsed time, and the stop reason for all five algorithms.
+`--problem` can be repeated, `--all-problems` runs the whole registry,
+and `--dim` can be repeated for problems with variable dimension.
+`--output` saves raw `RunRecord` rows to JSON or CSV; the format is
+chosen by the file extension. For multiple runs the table also shows
+the median and standard deviation, and with `--target` it shows the
+success rate. `--max-fev` and `--target` enable early stopping, and
+`--verbose` logs iterations. `--budget` compares the algorithms at a
+fixed number of evaluations and adds `f(x)@budget` and `budget`
+columns; `budget` shows how many runs actually reached the budget and
+have a measurement at it, for example `2/3`. If no run can be measured
+at the budget, `f(x)@budget` is `-` and `budget` is `0/N`. Stop
+reasons are aggregated across runs, for example
+`target 2/3, max_fev 1/3`; `-` means that all runs reached
 `max_iter`. The example commands require an editable install:
 `pip install -e ".[dev,plot]"`.
 
