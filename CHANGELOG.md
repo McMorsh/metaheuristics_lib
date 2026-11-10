@@ -14,6 +14,7 @@ and the project follows [Semantic Versioning](https://semver.org/).
   Russian translations are available in `README.ru.md` and
   `CHANGELOG.ru.md`.
 - Public `docs/` directory reserved for algorithm documentation.
+- User guides in `guides/` in English and Russian.
 - `algorithm.nfev_history` and `algorithm.best_fitness_history` track
   the best value after each evaluation.
 - Benchmark option `--budget` compares algorithms at a fixed number of

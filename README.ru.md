@@ -18,6 +18,12 @@
   нескольким задачам и сводной статистикой.
 - Тесты, покрытие, Ruff и strict mypy.
 
+## Документация
+
+- [Руководства](guides/README.ru.md)
+- [История изменений](CHANGELOG.ru.md)
+- [GitHub Releases](https://github.com/McMorsh/metaheuristics_lib/releases)
+
 ## Структура
 
 ```text
@@ -36,6 +42,7 @@ metaheuristics_lib/
 │       ├── __init__.py   # публичный фасад
 │       └── py.typed
 ├── examples/
+├── guides/               # пользовательские руководства
 ├── tests/
 ├── docs/                 # предназначен для документации по алгоритмам
 ├── notes/                # служебные заметки, не отслеживаются Git

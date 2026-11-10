@@ -18,6 +18,12 @@ optional MPI.
   summary statistics.
 - Tests, coverage, Ruff, and strict mypy.
 
+## Documentation
+
+- [Guides](guides/README.md)
+- [Changelog](CHANGELOG.md)
+- [GitHub Releases](https://github.com/McMorsh/metaheuristics_lib/releases)
+
 ## Project layout
 
 ```text
@@ -36,6 +42,7 @@ metaheuristics_lib/
 │       ├── __init__.py   # public facade
 │       └── py.typed
 ├── examples/
+├── guides/               # user guides
 ├── tests/
 ├── docs/                 # reserved for algorithm documentation
 ├── notes/                # local development notes, not tracked
